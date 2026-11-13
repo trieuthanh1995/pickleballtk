@@ -1610,10 +1610,10 @@
   }
 
   const BLURB = {
-    bunny: 'Phản xạ nhanh ở lưới', bear: 'Cú drive như sấm', cat: 'Dink khéo, khó đoán', pig: 'Lì đòn, chạy không biết mệt',
-    frog: 'Bật nhảy đập bóng cao', penguin: 'Chậm mà chắc', fox: 'Ranh mãnh với cú drop', panda: 'Bình tĩnh ở điểm quyết định',
+    bunny: 'Công chúa xinh xinh', bear: 'Chú bé tinh nghịch', cat: 'Dink khéo, khó đoán', pig: 'Lì đòn, chạy không biết mệt',
+    frog: 'Bật nhảy đập bóng cao', penguin: 'Chậm mà chắc', fox: 'Ranh mãnh với cú drop', panda: 'Cái gì cũng hay',
     dino: 'Smash rung cả sân', monkey: 'Lăng xăng khắp sân', elephant: 'Tầm với dài, đỡ đâu cũng tới', raccoon: 'Chuyên cú lob lén',
-    deer: 'Bước chân nhẹ như gió', turtle: 'Phòng thủ như bức tường', capybara: 'Không gì làm nao núng', seal: 'Giữ bóng như làm xiếc',
+    deer: 'Cái gì cũng giỏi', turtle: 'Phòng thủ như bức tường', capybara: 'Không gì làm nao núng', seal: 'Giữ bóng như làm xiếc',
     lion: 'Thủ lĩnh sân đấu', sloth: 'Chậm rãi nhưng chuẩn từng li',
   };
   let setupPreview = null;

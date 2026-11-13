@@ -45,20 +45,20 @@
   const SERVE_COLOR = '#ffffff';
 
   const CHARACTERS = [
-    { id: 'bunny',   name: 'Thỏ Mochi',       emoji: '🐰', body: 0xfff4f7, accent: 0xffb3c7, belly: 0xffffff, paddle: 0xff6f91, ears: 'long',    unlock: 0 },
-    { id: 'bear',    name: 'Gấu Bơ',          emoji: '🐻', body: 0xc68a55, accent: 0x8a5a33, belly: 0xf0d2a8, paddle: 0x3fa7d6, ears: 'round',   unlock: 0 },
+    { id: 'bunny',   name: 'Kiều Anh',         emoji: '🐰', body: 0xfff4f7, accent: 0xffb3c7, belly: 0xffffff, paddle: 0xff6f91, ears: 'long',    unlock: 0 },
+    { id: 'bear',    name: 'Duy Anh',          emoji: '🐻', body: 0xc68a55, accent: 0x8a5a33, belly: 0xf0d2a8, paddle: 0x3fa7d6, ears: 'round',   unlock: 0 },
+    { id: 'panda',   name: 'Zin',              emoji: '🐼', body: 0xffffff, accent: 0x222222, belly: 0xffffff, paddle: 0xe63946, ears: 'panda',   unlock: 0 },
+    { id: 'deer',     name: 'Bi',               emoji: '🦌', body: 0xd59a66, accent: 0x9ad06a, belly: 0xfbe6cc, paddle: 0xf4a261, ears: 'deer',     unlock: 0 },
     { id: 'cat',     name: 'Mèo Mun',         emoji: '🐱', body: 0x3b3b48, accent: 0xff9fb8, belly: 0xe9e9f2, paddle: 0xf7c948, ears: 'tri',     unlock: 0 },
     { id: 'pig',     name: 'Heo Hồng',        emoji: '🐷', body: 0xffb6c6, accent: 0xff8aa5, belly: 0xffd3dd, paddle: 0x7bd389, ears: 'pig',     unlock: 0 },
     { id: 'frog',    name: 'Ếch Cốm',         emoji: '🐸', body: 0x7ccf5b, accent: 0x4fa83a, belly: 0xe6f7c6, paddle: 0xff8c42, ears: 'frog',    unlock: 0 },
     { id: 'penguin', name: 'Cánh Cụt Đá',     emoji: '🐧', body: 0x2f3a4f, accent: 0xffa630, belly: 0xffffff, paddle: 0x9b6dff, ears: 'penguin', unlock: 0 },
     { id: 'fox',     name: 'Cáo Lửa',         emoji: '🦊', body: 0xff8a3d, accent: 0x5a2e14, belly: 0xffffff, paddle: 0x2ec4b6, ears: 'fox',     unlock: 0 },
-    { id: 'panda',   name: 'Gấu Trúc Tròn',   emoji: '🐼', body: 0xffffff, accent: 0x222222, belly: 0xffffff, paddle: 0xe63946, ears: 'panda',   unlock: 0 },
     { id: 'dino',    name: 'Khủng Long Xanh', emoji: '🦖', body: 0x5bc0a8, accent: 0xffd166, belly: 0xd8f3e9, paddle: 0xef476f, ears: 'dino',    unlock: 0 },
     // v3 – 9 nhân vật mới
     { id: 'monkey',   name: 'Khỉ Chuối',        emoji: '🐵', body: 0xb07a4f, accent: 0xffd23f, belly: 0xf6d7b0, paddle: 0xffd23f, ears: 'monkey',   unlock: 0 },
     { id: 'elephant', name: 'Voi Mây',          emoji: '🐘', body: 0xa9b4c8, accent: 0xff8fab, belly: 0xd8deea, paddle: 0x7bdff2, ears: 'elephant', unlock: 0 },
     { id: 'raccoon',  name: 'Gấu Mèo Mặt Nạ',   emoji: '🦝', body: 0x8d8f9c, accent: 0x5ad1a8, belly: 0xe9e9ef, paddle: 0xff7a59, ears: 'raccoon',  unlock: 0 },
-    { id: 'deer',     name: 'Nai Sao',          emoji: '🦌', body: 0xd59a66, accent: 0x9ad06a, belly: 0xfbe6cc, paddle: 0xf4a261, ears: 'deer',     unlock: 0 },
     { id: 'turtle',   name: 'Rùa Lá',           emoji: '🐢', body: 0x8fd17a, accent: 0x3e8e5e, belly: 0xf3eab0, paddle: 0x48cae4, ears: 'turtle',   unlock: 0 },
     { id: 'capybara', name: 'Chuột Lang Nước',  emoji: '🦫', body: 0xb98a5e, accent: 0xff9f1c, belly: 0xd9b38c, paddle: 0x2ec4b6, ears: 'capybara', unlock: 0 },
     { id: 'seal',     name: 'Hải Cẩu Bọt',      emoji: '🦭', body: 0xc8d3dd, accent: 0x4cc9f0, belly: 0xf1f5f9, paddle: 0xff70a6, ears: 'seal',     unlock: 0 },
