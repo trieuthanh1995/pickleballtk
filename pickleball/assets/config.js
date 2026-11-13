@@ -49,7 +49,7 @@
     { id: 'bear',    name: 'Duy Anh',          emoji: '🐻', body: 0xc68a55, accent: 0x8a5a33, belly: 0xf0d2a8, paddle: 0x3fa7d6, ears: 'round',   unlock: 0 },
     { id: 'panda',   name: 'Zin',              emoji: '🐼', body: 0xffffff, accent: 0x222222, belly: 0xffffff, paddle: 0xe63946, ears: 'panda',   unlock: 0 },
     { id: 'deer',     name: 'Bi',               emoji: '🦌', body: 0xd59a66, accent: 0x9ad06a, belly: 0xfbe6cc, paddle: 0xf4a261, ears: 'deer',     unlock: 0 },
-    { id: 'cat',     name: 'Mèo Mun',         emoji: '🐱', body: 0x3b3b48, accent: 0xff9fb8, belly: 0xe9e9f2, paddle: 0xf7c948, ears: 'tri',     unlock: 0 },
+    { id: 'cat',     name: 'Khánh Zô',         emoji: '🐱', body: 0x3b3b48, accent: 0xff9fb8, belly: 0xe9e9f2, paddle: 0xf7c948, ears: 'tri',     unlock: 0 },
     { id: 'pig',     name: 'Heo Hồng',        emoji: '🐷', body: 0xffb6c6, accent: 0xff8aa5, belly: 0xffd3dd, paddle: 0x7bd389, ears: 'pig',     unlock: 0 },
     { id: 'frog',    name: 'Ếch Cốm',         emoji: '🐸', body: 0x7ccf5b, accent: 0x4fa83a, belly: 0xe6f7c6, paddle: 0xff8c42, ears: 'frog',    unlock: 0 },
     { id: 'penguin', name: 'Cánh Cụt Đá',     emoji: '🐧', body: 0x2f3a4f, accent: 0xffa630, belly: 0xffffff, paddle: 0x9b6dff, ears: 'penguin', unlock: 0 },

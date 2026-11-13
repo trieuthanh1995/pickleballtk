@@ -1610,7 +1610,7 @@
   }
 
   const BLURB = {
-    bunny: 'Công chúa xinh xinh', bear: 'Chú bé tinh nghịch', cat: 'Dink khéo, khó đoán', pig: 'Lì đòn, chạy không biết mệt',
+    bunny: 'Công chúa xinh xinh', bear: 'Chú bé tinh nghịch', cat: 'Đoa toàn xịt', pig: 'Lì đòn, chạy không biết mệt',
     frog: 'Bật nhảy đập bóng cao', penguin: 'Chậm mà chắc', fox: 'Ranh mãnh với cú drop', panda: 'Cái gì cũng hay',
     dino: 'Smash rung cả sân', monkey: 'Lăng xăng khắp sân', elephant: 'Tầm với dài, đỡ đâu cũng tới', raccoon: 'Chuyên cú lob lén',
     deer: 'Cái gì cũng giỏi', turtle: 'Phòng thủ như bức tường', capybara: 'Không gì làm nao núng', seal: 'Giữ bóng như làm xiếc',
