@@ -48,3 +48,10 @@ Không cần cài thư viện nào. Chỉ cần Node.js 18 trở lên.
        TURN_PASS  = mật khẩu
      hoặc ICE_SERVERS = chuỗi JSON mảng iceServers do nhà cung cấp (Metered, Cloudflare, Twilio…) đưa cho bạn.
      Kiểm tra tại  https://tên-game.onrender.com/ice
+
+7) BẢN v6 – PLAYLIST NHẠC NỀN + THOẠI TO RÕ HƠN
+   - Cài đặt → "Playlist nhạc nền": chọn "Punk" (bài cũ), "One Piece" (bài mới, ~17 phút) hoặc "Cả hai (lần lượt)"; có nút "Bài tiếp".
+     File: assets/music/bgm.mp3 (Punk) và assets/music/onepiece.mp3 (One Piece, đã cân độ to bằng bài Punk, 80 kbps, ~10 MB).
+     Muốn thêm bài khác: bỏ file mp3 vào assets/music/ rồi thêm 1 dòng vào mảng TRACKS ở đầu phần nhạc nền trong assets/audio.js.
+   - Thoại: "Âm lượng thoại" (mặc định 200%, tối đa 300%) và "Độ to mic của bạn" (mặc định 180%); từng người chỉnh riêng được tới 300%.
+     Có bộ lọc ù, nén chống vỡ tiếng, bitrate Opus 64 kbps, và tự hạ nhạc nền/hiệu ứng khi có người đang nói.

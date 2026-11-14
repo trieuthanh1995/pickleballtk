@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com/">
   <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
   <link href="./assets/css2" rel="stylesheet" media="all" onload="this.media=&#39;all&#39;">
-  <link rel="stylesheet" href="./assets/style.css?v=5">
+  <link rel="stylesheet" href="./assets/style.css?v=6">
 </head>
 <body>
   <canvas id="game" data-engine="three.js r147" width="1156" height="1071" style="width: 771px; height: 714px;"></canvas>
@@ -214,6 +214,11 @@
         <label class="check"><input type="checkbox" id="set-sfx"> 🔊 Âm thanh hiệu ứng (tiếng vợt, bóng, khán giả…)</label>
         <label>Âm lượng chung <input type="range" id="set-volume" min="0" max="100" step="5"></label>
         <label>Âm lượng nhạc nền <input type="range" id="set-musicvol" min="0" max="100" step="5"></label>
+        <div class="track-pick">
+          <span class="lbl">🎼 Playlist nhạc nền</span>
+          <div class="seg" id="set-track"></div>
+          <div class="track-row"><span class="muted" id="set-track-now"></span><button class="btn tiny" id="set-track-next">⏭ Bài tiếp</button></div>
+        </div>
         <label class="check"><input type="checkbox" id="set-ring"> Vòng canh thời điểm</label>
         <label class="check"><input type="checkbox" id="set-landing"> Dấu điểm rơi của bóng</label>
         <label class="check"><input type="checkbox" id="set-hitstop"> Khựng hình khi đánh PERFECT (offline)</label>
@@ -362,6 +367,10 @@
               <button class="btn tiny ghost hidden" id="voice-mute">🎙 Mic đang bật</button>
               <button class="btn tiny ghost hidden" id="voice-mode">Chế độ: mở mic</button>
             </div>
+            <div class="voice-sliders">
+              <label>🔊 Âm lượng thoại <input type="range" id="voice-master" min="0" max="300" step="10"><b id="voice-master-val"></b></label>
+              <label>🎙 Độ to mic của bạn <input type="range" id="voice-mic" min="50" max="300" step="10"><b id="voice-mic-val"></b></label>
+            </div>
             <button class="btn tiny voice-ptt hidden" id="voice-ptt">🗣 Giữ để nói (hoặc giữ phím T)</button>
             <ul class="voice-list" id="voice-list"></ul>
             <p class="note" id="voice-note"></p>
@@ -432,7 +441,7 @@
   <div id="loading" class="hidden"><div class="ld-box"><div class="spinner"></div><div id="loading-text">Đang chuẩn bị đồ họa…</div><div id="loading-sub"></div><button id="loading-reload" class="btn primary hidden" onclick="location.reload()">↻ Tải lại</button></div></div>
   <script>
     // Bắt lỗi xảy ra trước khi game khởi động xong để không bao giờ "treo im lặng"
-    window.PP_HTML_REV = 9;   // tăng khi đổi cấu trúc HTML mà game.js phụ thuộc
+    window.PP_HTML_REV = 10;   // tăng khi đổi cấu trúc HTML mà game.js phụ thuộc
     (function () {
       function fail(msg) {
         var l = document.getElementById('loading'); if (!l || l.classList.contains('hidden')) return;
@@ -459,15 +468,15 @@
   <script src="./assets/match.js"></script>
   <script src="./assets/ai.js"></script>
   <script src="./assets/protocol.js?v=5"></script>
-  <script src="./assets/audio.js"></script>
+  <script src="./assets/audio.js?v=6"></script>
   <script src="./assets/world.js"></script>
   <script src="./assets/kit.js?v=4"></script>
   <script src="./assets/character.js?v=4"></script>
   <script src="./assets/input.js"></script>
   <script src="./assets/net.js"></script>
-  <script src="./assets/voice.js?v=5"></script>
+  <script src="./assets/voice.js?v=6"></script>
   <script src="./assets/ui.js"></script>
-  <script src="./assets/game.js?v=5"></script>
+  <script src="./assets/game.js?v=6"></script>
 
 
 

@@ -7,27 +7,73 @@
   let ctx = null, master = null, sfx = null, amb = null, comp = null, noiseBuf = null, pinkBuf = null;
   let muted = false, volume = 0.8;
   let ambWanted = { on: false, venue: null }, ambNodes = null;
-  /* ---------- nhạc nền: 1 bản lặp vô hạn, không bao giờ dừng/khởi động lại giữa các trận ---------- */
+  /* ---------- nhạc nền: playlist. Chọn 1 bài (lặp vô hạn) hoặc phát lần lượt tất cả; không dừng giữa các trận ---------- */
+  const TRACKS = [
+    { id: 'punk', name: 'Punk', src: 'assets/music/bgm.mp3' },
+    { id: 'onepiece', name: 'One Piece', src: 'assets/music/onepiece.mp3' },
+  ];
   let musicEl = null, musicOn = true, musicVol = 0.5, musicStarted = false;
-  function musicEffVol() { return clamp(volume * musicVol * 1.6, 0, 1); }
+  let trackSel = 'punk', curIdx = 0, onTrack = null;       // trackSel: id một bài, hoặc 'all'
+  let duckM = 1, duckS = 1, duckTM = 1, duckTS = 1, duckTimer = 0;   // hạ nhạc / hiệu ứng khi có người đang nói
+  function musicEffVol() { return clamp(volume * musicVol * 1.6 * duckM, 0, 1); }
+  const idxOf = (sel) => { const i = TRACKS.findIndex((t) => t.id === sel); return i >= 0 ? i : 0; };
+  function loadTrack(idx) {
+    curIdx = idx;
+    if (musicEl) {
+      musicEl.loop = trackSel !== 'all';
+      musicEl.src = TRACKS[idx].src;
+      musicEl.volume = musicEffVol();
+    }
+    if (onTrack) { try { onTrack(TRACKS[idx], trackSel); } catch (e) { /* bỏ qua */ } }
+  }
+  function playEl() {
+    if (!musicEl || !musicOn) return;
+    try { const pr = musicEl.play(); if (pr && pr.then) pr.then(() => { musicStarted = true; }).catch(() => { /* chờ lần chạm kế tiếp */ }); } catch (e) { /* bỏ qua */ }
+  }
+  function nextTrack() { loadTrack((curIdx + 1) % TRACKS.length); playEl(); }
   function musicElement() {
     if (!musicEl) {
       try {
-        musicEl = new Audio('assets/music/bgm.mp3');
-        musicEl.loop = true; musicEl.preload = 'auto'; musicEl.setAttribute('playsinline', '');
-        musicEl.volume = musicEffVol();
+        musicEl = new Audio();
+        musicEl.preload = 'auto'; musicEl.setAttribute('playsinline', '');
+        musicEl.onended = () => { if (trackSel === 'all') nextTrack(); };       // chế độ lần lượt: hết bài thì sang bài kế
+        musicEl.onerror = () => { if (trackSel === 'all' && TRACKS.length > 1) nextTrack(); };
+        loadTrack(trackSel === 'all' ? curIdx : idxOf(trackSel));
       } catch (e) { musicEl = null; }
     }
     return musicEl;
+  }
+  function setTrack(sel) {
+    const prev = curIdx;
+    trackSel = sel === 'all' || TRACKS.some((t) => t.id === sel) ? sel : 'punk';
+    if (trackSel !== 'all') curIdx = idxOf(trackSel);
+    if (!musicEl) { if (onTrack) onTrack(TRACKS[curIdx], trackSel); return; }
+    musicEl.loop = trackSel !== 'all';
+    if (trackSel === 'all') { if (!musicEl.src) loadTrack(curIdx); else if (onTrack) onTrack(TRACKS[curIdx], trackSel); }   // đang phát bài nào thì phát tiếp bài đó
+    else if (curIdx !== prev || !musicEl.src) loadTrack(curIdx);
+    else if (onTrack) onTrack(TRACKS[curIdx], trackSel);
+    if (!musicEl.paused || musicStarted) playEl();
   }
   function musicStart() {
     if (!musicOn) return;
     const el = musicElement(); if (!el) return;
     el.volume = musicEffVol();
     if (!el.paused) { musicStarted = true; return; }
-    try { const pr = el.play(); if (pr && pr.then) pr.then(() => { musicStarted = true; }).catch(() => { /* chờ lần chạm kế tiếp */ }); } catch (e) { /* bỏ qua */ }
+    playEl();
   }
   function musicStop() { if (musicEl && !musicEl.paused) { try { musicEl.pause(); } catch (e) { /* bỏ qua */ } } }
+  /** Hạ nhạc nền + hiệu ứng khi có người đang nói chuyện để nghe rõ tiếng thoại, tự trả lại khi họ ngừng */
+  function duck(on) {
+    duckTM = on ? 0.25 : 1; duckTS = on ? 0.5 : 1;
+    if (duckTimer) return;
+    duckTimer = setInterval(() => {
+      const step = (cur, tgt) => (Math.abs(cur - tgt) < 0.03 ? tgt : cur + (tgt > cur ? 0.04 : -0.1));
+      duckM = step(duckM, duckTM); duckS = step(duckS, duckTS);
+      if (musicEl) musicEl.volume = musicEffVol();
+      setMasterGain();
+      if (duckM === duckTM && duckS === duckTS) { clearInterval(duckTimer); duckTimer = 0; }
+    }, 40);
+  }
   // trình duyệt chỉ cho phát tiếng sau khi người chơi chạm/bấm: thử lại ở mỗi lần chạm đầu tiên
   ['pointerdown', 'touchend', 'keydown', 'click'].forEach((ev) => window.addEventListener(ev, () => { if (!musicStarted) musicStart(); }, { passive: true }));
   document.addEventListener('visibilitychange', () => { if (document.hidden) musicStop(); else if (musicStarted || musicOn) musicStart(); });
@@ -288,12 +334,19 @@
     if (!ctx) return;
     const t = ctx.currentTime;
     master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t);
-    master.gain.linearRampToValueAtTime(muted ? 0 : volume * 0.7, t + 0.08);
+    master.gain.linearRampToValueAtTime(muted ? 0 : volume * 0.7 * duckS, t + 0.08);
   }
 
   PP.Audio = {
     unlock() { musicStart(); return ensure(); },
     musicStart,
+    tracks: TRACKS,
+    setMusicTrack: setTrack,
+    get musicTrack() { return trackSel; },
+    get nowPlaying() { return TRACKS[curIdx]; },
+    musicNext() { musicElement(); nextTrack(); },
+    onTrackChange(f) { onTrack = f; },
+    duck,
     setMusicOn(m) { musicOn = !!m; if (musicOn) musicStart(); else musicStop(); },
     setMusicVolume(v) { musicVol = clamp(+v || 0, 0, 1); if (musicEl) musicEl.volume = musicEffVol(); },
     get musicOn() { return musicOn; },

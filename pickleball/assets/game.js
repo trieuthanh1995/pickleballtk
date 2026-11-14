@@ -13,7 +13,7 @@
   const CONTACT_REACH = 1.3;   // tầm với thực tế của nhân vật (vai → mặt vợt + dịch thân)
 
   /* ================= Lưu trữ ================= */
-  const DEFAULT_SETTINGS = { quality: 'auto', volume: 80, music: true, sfx: true, musicVol: 50, ring: true, landing: true, hitstop: true, shake: true, rules: true };
+  const DEFAULT_SETTINGS = { quality: 'auto', volume: 80, music: true, sfx: true, musicVol: 50, musicTrack: 'punk', voiceVol: 200, voiceMic: 180, ring: true, landing: true, hitstop: true, shake: true, rules: true };
   const Save = {
     data: { wins: 0, losses: 0, char: 'bunny', level: 'pro', venue: 'gym', target: 7, scoring: 'sideout', mode: 1, muted: false, name: '', deviceId: '', settings: {}, looks: {} },
     load() {
@@ -1110,6 +1110,7 @@
     A.setMuted(!st.sfx);
     A.setVolume(st.volume / 100);
     A.setMusicVolume(st.musicVol / 100);
+    A.setMusicTrack(st.musicTrack);
     A.setMusicOn(!!st.music);
   }
 
@@ -1230,6 +1231,18 @@
     $('#set-sfx').onchange = () => { st.sfx = $('#set-sfx').checked; applyAudioSettings(); Save.save(); refreshMainStats(); if (st.sfx) A.click(); };
     $('#set-musicvol').value = st.musicVol;
     $('#set-musicvol').oninput = () => { st.musicVol = +$('#set-musicvol').value; applyAudioSettings(); Save.save(); };
+    // playlist nhạc nền: từng bài hoặc phát lần lượt
+    const trEl = $('#set-track'); trEl.textContent = '';
+    for (const t of A.tracks.concat([{ id: 'all', name: 'Cả hai (lần lượt)' }])) { const b = document.createElement('button'); b.dataset.v = t.id; b.textContent = t.name; trEl.append(b); }
+    const trNow = () => {
+      const np = A.nowPlaying, all = st.musicTrack === 'all';
+      $('#set-track-now').textContent = all ? 'Đang phát: ' + np.name + ' (hết bài sẽ sang bài kế)' : 'Đang chọn: ' + np.name;
+      $('#set-track-next').disabled = !all;
+    };
+    UI.seg(trEl, st.musicTrack, (v) => { st.musicTrack = v; applyAudioSettings(); Save.save(); trNow(); A.click(); });
+    $('#set-track-next').onclick = () => { A.click(); A.musicNext(); trNow(); };
+    A.onTrackChange(trNow);
+    trNow();
     $('#set-volume').value = st.volume;
     $('#set-volume').oninput = () => { st.volume = +$('#set-volume').value; A.setVolume && A.setVolume(st.volume / 100); Save.save(); };
     const bindCheck = (id, key) => { const el = $(id); el.checked = !!st[key]; el.onchange = () => { st[key] = el.checked; Save.save(); }; };
@@ -1624,7 +1637,14 @@
   let voiceSig = '', voiceNote = '';
   const Voice = PP.Voice;
   Voice.onNote = (t) => { voiceNote = t; UI.toast(t, 4200); voiceRender(true); };
-  Voice.onChange = () => voiceRender(false);
+  let duckOff = 0, ducked = false;
+  Voice.onChange = () => {
+    voiceRender(false);
+    const sp = Voice.active && Voice.othersSpeaking();                 // có người khác đang nói → hạ nhạc nền/hiệu ứng để nghe rõ
+    if (sp) { clearTimeout(duckOff); duckOff = 0; if (!ducked) { ducked = true; A.duck(true); } }
+    else if (ducked && !Voice.active) { clearTimeout(duckOff); duckOff = 0; ducked = false; A.duck(false); }
+    else if (ducked && !duckOff) duckOff = setTimeout(() => { duckOff = 0; ducked = false; A.duck(false); }, 700);
+  };
   const voiceHumans = () => (room ? room.players.filter((p) => p.connected) : []);
   function voiceRender(force) {
     const players = voiceHumans();
@@ -1664,7 +1684,7 @@
       li.append(st);
       if (p.id !== myPid && p.voice && Voice.peerInfo(p.id)) {
         const info = Voice.peerInfo(p.id);
-        const vol = document.createElement('input'); vol.type = 'range'; vol.min = '0'; vol.max = '100'; vol.value = String(Math.round(info.vol * 100)); vol.title = 'Âm lượng của ' + p.name;
+        const vol = document.createElement('input'); vol.type = 'range'; vol.min = '0'; vol.max = '300'; vol.value = String(Math.round(info.vol * 100)); vol.title = 'Âm lượng của ' + p.name;
         vol.oninput = () => Voice.setVolume(p.id, +vol.value / 100);
         const mb = document.createElement('button'); mb.className = 'btn tiny ghost'; mb.textContent = info.muted ? '🔈' : '🔇'; mb.title = info.muted ? 'Bật tiếng người này' : 'Tắt tiếng người này';
         mb.onclick = () => { Voice.setPeerMuted(p.id, !info.muted); };
@@ -1702,6 +1722,11 @@
   }
   function bindVoice() {
     Voice.mode = Save.data.voiceMode === 'ptt' ? 'ptt' : 'open';
+    const vm = $('#voice-master'), vmic = $('#voice-mic');
+    const showVals = () => { $('#voice-master-val').textContent = vm.value + '%'; $('#voice-mic-val').textContent = vmic.value + '%'; };
+    vm.value = S().voiceVol; vmic.value = S().voiceMic; Voice.setMaster(S().voiceVol / 100); Voice.setMicGain(S().voiceMic / 100); showVals();
+    vm.oninput = () => { S().voiceVol = +vm.value; Voice.setMaster(+vm.value / 100); Save.save(); showVals(); };
+    vmic.oninput = () => { S().voiceMic = +vmic.value; Voice.setMicGain(+vmic.value / 100); Save.save(); showVals(); };
     $('#voice-toggle').onclick = () => {
       A.click();
       if (Voice.active) { Voice.disable(); voiceNote = ''; } else { voiceNote = ''; Voice.enable().then((ok) => { if (!ok) voiceRender(true); }); }
@@ -1964,7 +1989,7 @@
   function bootStep(text) { const el = document.getElementById('loading-text'); if (el) el.textContent = text; return nextPaint(); }
   function bootFail(msg) { if (window.__bootFail) window.__bootFail(msg); else $('#loading').textContent = msg; }
 
-  const HTML_REV = 9;   // phải khớp window.PP_HTML_REV trong index.html
+  const HTML_REV = 10;   // phải khớp window.PP_HTML_REV trong index.html
   async function boot() {
     if (window.PP_HTML_REV !== HTML_REV) {
       bootFail('Trang đang dùng bản cũ trong bộ nhớ đệm của trình duyệt. Bấm "Tải lại" (hoặc Ctrl+F5 / Cmd+Shift+R).');
