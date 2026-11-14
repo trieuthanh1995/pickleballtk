@@ -25,3 +25,11 @@ Không cần cài thư viện nào. Chỉ cần Node.js 18 trở lên.
 4) SỬA NHANH
    Tên nhân vật / màu / sân : assets/config.js
    Tên game                 : assets/config.js (GAME_NAME), index.html (thẻ <title> và <h1 class="logo">)
+
+5) BẢN v4 – TỦ ĐỒ VIP
+   - Ảnh mẫu (nút "⬇ Ảnh mẫu") đã ghi rõ kích thước; mỗi ô kit cũng hiện cỡ ảnh nên dùng:
+       Áo      1024 x 512  px (tỉ lệ 2:1)   - tối thiểu 512 x 256
+       Quần/Váy 1024 x 256 px (tỉ lệ 4:1)   - tối thiểu 512 x 128
+       Vợt     700 x 1008  px (tỉ lệ 25:36) - tối thiểu 350 x 504
+   - Chọn ảnh xong sẽ mở trình chỉnh: kéo để dời, cuộn/chụm để phóng to - thu nhỏ, lật ngang, đổi nền.
+   - Kiểu áo mới trong Tủ đồ: "Váy xòe công chúa" và "Vest lịch lãm".

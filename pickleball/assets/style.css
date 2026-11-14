@@ -425,3 +425,24 @@ body.touch .rules-panel { width: min(270px, 72vw); }
 .vip-slot h4 { margin: 0; font-size: 16px; }
 .vip-status { font-size: 12px; color: #5a6480; margin: 2px 0 6px; }
 .vip-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ===== v4: Tủ đồ VIP – thông số ảnh + trình chỉnh ảnh (kéo, phóng to / thu nhỏ) ===== */
+.vip-spec { font-size: 11.5px; line-height: 1.35; color: #3a4a7a; background: #eef2fb; border-radius: 8px; padding: 4px 8px; margin: 0 0 6px; }
+.kit-ed { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 12px; background: rgba(20, 22, 40, 0.62); }
+.kit-ed-card { width: min(640px, 100%); max-height: calc(100dvh - 24px); overflow-y: auto; background: #fff; color: var(--ink); border-radius: 20px; padding: 16px 18px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4); text-align: left; }
+.kit-ed-title { margin: 0 0 4px; font-size: 20px; }
+.kit-ed-spec { margin: 0 0 8px; font-size: 12.5px; color: #3a4a7a; background: #eef2fb; border-radius: 8px; padding: 6px 10px; }
+.kit-ed-stage { background: #dfe5f3; border-radius: 12px; padding: 6px; }
+.kit-ed-stage canvas { display: block; width: 100%; height: auto; border-radius: 8px; cursor: grab; touch-action: none; background: #fff; max-height: 46dvh; object-fit: contain; margin: 0 auto; }
+.kit-ed-stage canvas:active { cursor: grabbing; }
+.kit-ed-hint { margin: 6px 0; font-size: 12.5px; color: var(--muted); }
+.kit-ed-q { font-size: 12.5px; font-weight: 700; border-radius: 8px; padding: 5px 10px; margin-bottom: 8px; }
+.kit-ed-q.ok { background: #e3f7e9; color: #1f7a3a; } .kit-ed-q.warn { background: #fff3d6; color: #8a5a00; } .kit-ed-q.bad { background: #ffe1e4; color: #b3243b; }
+.kit-ed-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.kit-ed-row input[type=range] { flex: 1; min-width: 120px; accent-color: var(--primary); }
+.kit-ed-row input[type=color] { width: 34px; height: 30px; border: 0; padding: 0; background: none; cursor: pointer; }
+.kit-ed-lbl { font-size: 13px; font-weight: 700; color: var(--muted); }
+.kit-ed-pct { min-width: 44px; text-align: right; font-weight: 800; font-size: 13px; }
+.kit-ed-chk { margin-left: auto; font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+.kit-ed-row .btn.sel { background: #2b86b0; color: #fff; box-shadow: none; }
+.kit-ed-act { justify-content: flex-end; margin-top: 14px; }

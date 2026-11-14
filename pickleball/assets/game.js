@@ -1113,11 +1113,27 @@
 
   /* ================= Tủ đồ VIP: thay kit bằng ảnh của người chơi ================= */
   let vipPreview = null, vipChar = 'bunny', vipScope = 'char', vipSlot = 'shirt';
-  const VIP_SLOTS = [
-    ['shirt', '👕 Áo', 'Ảnh áo: giữa ảnh là mặt trước, hai mép ảnh là mặt sau'],
-    ['shorts', '🩳 Quần', 'Ảnh quần, quấn quanh hông'],
-    ['paddle', '🏓 Vợt', 'Ảnh dán lên mặt vợt'],
-  ];
+  const VIP_SLOT_TEXT = {
+    shirt:  { tee: ['👕 Áo', 'Ảnh áo: giữa ảnh là mặt trước, hai mép ảnh là mặt sau'] },
+    shorts: { tee: ['🩳 Quần', 'Ảnh quần, quấn quanh hông'] },
+    paddle: { tee: ['🏓 Vợt', 'Ảnh dán lên mặt vợt'] },
+  };
+  const VIP_STYLE_TEXT = {
+    dress: { shirt: ['👗 Thân váy (phần áo)', 'Ảnh phần thân váy: giữa ảnh là mặt trước'], shorts: ['👗 Chân váy xòe', 'Ảnh chân váy, quấn quanh eo'] },
+    suit:  { shirt: ['🤵 Vest (áo khoác)', 'Ảnh áo vest: giữa ảnh là mặt trước'], shorts: ['👖 Quần tây', 'Ảnh quần tây, quấn quanh hông'] },
+  };
+  const VIP_LABELS = {
+    dress: { shirt: { top: 'CỔ / NGỰC VÁY', bottom: 'EO VÁY' }, shorts: { top: 'EO VÁY', bottom: 'GẤU VÁY' } },
+    suit:  { shirt: { top: 'CỔ VEST', bottom: 'GẤU VEST' }, shorts: { top: 'LƯNG QUẦN', bottom: 'GẤU QUẦN' } },
+  };
+  function vipStyle() { return (fullLook(vipChar) || {}).shirtStyle; }
+  function vipSlots() {
+    return ['shirt', 'shorts', 'paddle'].map((slot) => {
+      const o = (VIP_STYLE_TEXT[vipStyle()] || {})[slot] || VIP_SLOT_TEXT[slot].tee;
+      return [slot, o[0], o[1]];
+    });
+  }
+  function vipLabels(slot) { return (VIP_LABELS[vipStyle()] || {})[slot] || null; }
   const vipScopeId = () => (vipScope === 'all' ? 'all' : vipChar);
   function openVip() {
     closeSetupPreview();
@@ -1133,7 +1149,7 @@
     UI.$$('#vip-scope button').forEach((b) => b.classList.toggle('sel', b.dataset.v === vipScope));
     const box = $('#vip-slots'); box.textContent = '';
     const scope = vipScopeId();
-    for (const [slot, title, hint] of VIP_SLOTS) {
+    for (const [slot, title, hint] of vipSlots()) {
       const mine = PP.Kit.own(scope, slot);
       const eff = PP.Kit.get(vipChar, slot);
       const card = document.createElement('div'); card.className = 'vip-slot';
@@ -1143,6 +1159,7 @@
       th.onclick = () => vipPick(slot);
       const info = document.createElement('div');
       const h4 = document.createElement('h4'); h4.textContent = title;
+      const spec = document.createElement('div'); spec.className = 'vip-spec'; spec.textContent = PP.Kit.specLine(slot);
       const st = document.createElement('div'); st.className = 'vip-status';
       st.textContent = mine ? (scope === 'all' ? 'Đang dùng kit chung cho mọi nhân vật' : 'Đang dùng kit riêng của nhân vật này')
         : (eff ? 'Đang dùng kit chung (từ mục "Tất cả")' : hint);
@@ -1150,8 +1167,10 @@
       const bPick = document.createElement('button'); bPick.className = 'btn tiny primary'; bPick.textContent = '📁 Chọn ảnh'; bPick.onclick = () => vipPick(slot);
       const bDel = document.createElement('button'); bDel.className = 'btn tiny ghost'; bDel.textContent = 'Xóa'; bDel.onclick = () => { A.click(); PP.Kit.clear(scope, slot); vipRender(); };
       const bTpl = document.createElement('button'); bTpl.className = 'btn tiny ghost'; bTpl.textContent = '⬇ Ảnh mẫu'; bTpl.onclick = () => vipTemplate(slot);
-      row.append(bPick, bDel, bTpl);
-      info.append(h4, st, row);
+      const bEdit = document.createElement('button'); bEdit.className = 'btn tiny'; bEdit.textContent = '✂ Chỉnh lại';
+      bEdit.onclick = () => vipReedit(slot);
+      if (eff) row.append(bPick, bEdit, bDel, bTpl); else row.append(bPick, bTpl);
+      info.append(h4, st, spec, row);
       card.append(th, info);
       box.append(card);
     }
@@ -1161,14 +1180,26 @@
     $('#vip-name').textContent = CHAR(vipChar).name;
     if (vipPreview) vipPreview.set(CHAR(vipChar), fullLook(vipChar));
   }
+  /** Mở trình chỉnh ảnh (kéo + phóng to/thu nhỏ) rồi lưu kit */
+  function vipEditAndSave(src, slot, scope) {
+    const title = (vipSlots().find((x) => x[0] === slot) || [slot, slot])[1].replace(/\s*\(.*\)$/, '');
+    PP.Kit.edit(src, slot, { title, labels: vipLabels(slot) })
+      .then((cv) => (cv ? PP.Kit.addCanvas(cv, scope, slot).then(() => { UI.toast('Đã thay kit!'); vipRender(); }) : null))
+      .catch((e) => UI.toast(e && e.message ? e.message : 'Không thêm được ảnh'));
+  }
+  function vipReedit(slot) {
+    A.click();
+    const e = PP.Kit.get(vipChar, slot); if (!e) return;
+    vipEditAndSave(e.canvas, slot, vipScopeId());
+  }
   function vipPick(slot) { A.click(); vipSlot = slot; const f = $('#vip-file'); f.value = ''; f.click(); }
   function vipTemplate(slot) {
     A.click();
     try {
-      const cv = PP.Kit.template(slot);
+      const cv = PP.Kit.template(slot, vipLabels(slot));
       cv.toBlob((b) => {
         if (!b) return;
-        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'kit-mau-' + slot + '.png';
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'kit-mau-' + slot + '-' + PP.Kit.SPECS[slot].rec[0] + 'x' + PP.Kit.SPECS[slot].rec[1] + '.png';
         document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
       }, 'image/png');
     } catch (e) { UI.toast('Không tạo được ảnh mẫu'); }
@@ -1259,10 +1290,19 @@
     }
     wdRender();
   }
+  // khi chọn Váy / Vest: gợi ý bảng màu đẹp ngay (người chơi vẫn đổi màu tự do sau đó)
+  const STYLE_PRESET = {
+    dress: { shirt: '#ff8fc7', shorts: '#ffc2e2', accent: '#ffd23f' },
+    suit:  { shirt: '#2b2d42', shorts: '#2b2d42', accent: '#e63946' },
+  };
+  const COLOR_LABELS = {
+    dress: { shirt: 'Thân váy', shorts: 'Chân váy', accent: 'Nơ & viền' },
+    suit:  { shirt: 'Vest', shorts: 'Quần tây', accent: 'Cà vạt' },
+  };
   function wdSeg(el, items, key) {
     el.textContent = '';
     for (const it of items) { const b = document.createElement('button'); b.dataset.v = it.id; b.textContent = it.name; el.append(b); }
-    return UI.seg(el, fullLook(wdChar)[key], (v) => setLook({ [key]: v }));
+    return UI.seg(el, fullLook(wdChar)[key], (v) => setLook(key === 'shirtStyle' ? Object.assign({ [key]: v }, STYLE_PRESET[v] || {}) : { [key]: v }));
   }
   function wdRender() {
     const O = PP.Character.OPTIONS || {};
@@ -1301,6 +1341,8 @@
     const look = fullLook(wdChar);
     $('#wd-name').textContent = CHAR(wdChar).name;
     UI.$$('#wd-colors .color-row').forEach((row) => {
+      const lbl = row.querySelector('.lbl');
+      if (lbl) lbl.textContent = ((COLOR_LABELS[look.shirtStyle] || {})[row.dataset.key]) || (COLOR_KEYS.find((c) => c[0] === row.dataset.key) || [0, ''])[1];
       const cur = hex(look[row.dataset.key]);
       row.querySelectorAll('.sw-btn').forEach((b) => b.classList.toggle('sel', b.dataset.c === cur));
       row.querySelector('input').value = /^#[0-9a-f]{6}$/.test(cur) ? cur : '#ffffff';
@@ -1601,8 +1643,7 @@
     UI.seg($('#vip-anim'), 'ready', (v) => { if (vipPreview && vipPreview.setAnim) vipPreview.setAnim(v); });
     $('#vip-file').onchange = () => {
       const f = $('#vip-file').files && $('#vip-file').files[0]; if (!f) return;
-      PP.Kit.add(f, vipScopeId(), vipSlot).then(() => { UI.toast('Đã thay kit!'); vipRender(); })
-        .catch((e) => UI.toast(e && e.message ? e.message : 'Không thêm được ảnh'));
+      vipEditAndSave(f, vipSlot, vipScopeId());
     };
     $('#btn-sound').onclick = () => { const st = S(), on = !st.music && !st.sfx; st.music = on; st.sfx = on; Save.data.muted = !on; applyAudioSettings(); Save.save(); refreshMainStats(); A.click(); };
     $('#btn-start').onclick = () => { A.unlock(); A.click(); closeSetupPreview(); startOffline(); };

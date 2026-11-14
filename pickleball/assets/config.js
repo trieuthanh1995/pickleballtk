@@ -103,7 +103,7 @@
   const LOOK = {
     patterns: ['solid', 'stripe', 'dots', 'split', 'flame', 'star', 'wave', 'check'],
     accessories: ['default', 'none', 'cap', 'capBack', 'visor', 'band', 'beanie', 'bow', 'shades', 'crown', 'flower', 'headphones', 'halo', 'party'],
-    shirtStyles: ['tee', 'tank', 'jersey', 'hoodie'],
+    shirtStyles: ['tee', 'tank', 'jersey', 'hoodie', 'dress', 'suit'],
     colorKeys: ['shirt', 'shorts', 'accent', 'shoes', 'paddle'],
     numberMax: 99,
   };

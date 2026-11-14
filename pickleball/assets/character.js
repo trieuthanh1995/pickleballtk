@@ -60,7 +60,7 @@
     { id: 'shades', name: 'Kính râm' }, { id: 'flower', name: 'Hoa cài' }, { id: 'headphones', name: 'Tai nghe' }, { id: 'party', name: 'Mũ tiệc' },
     { id: 'crown', name: 'Vương miện' }, { id: 'halo', name: 'Vầng hào quang' },
   ];
-  const SHIRT_STYLES = [{ id: 'tee', name: 'Áo thun' }, { id: 'tank', name: 'Áo ba lỗ' }, { id: 'jersey', name: 'Áo thi đấu' }, { id: 'hoodie', name: 'Áo hoodie' }];
+  const SHIRT_STYLES = [{ id: 'tee', name: 'Áo thun' }, { id: 'tank', name: 'Áo ba lỗ' }, { id: 'jersey', name: 'Áo thi đấu' }, { id: 'hoodie', name: 'Áo hoodie' }, { id: 'dress', name: 'Váy xòe công chúa' }, { id: 'suit', name: 'Vest lịch lãm' }];
   const PALETTE = ['#ffffff', '#2b2d42', '#8d99ae', '#ff4d6d', '#ff8fab', '#ff6b35', '#ff9f1c', '#ffd23f', '#b5e48c', '#52b788', '#2ec4b6', '#4cc9f0', '#3a86ff', '#5e60ce', '#9b5de5', '#f15bb5', '#8a5a33', '#f4e1c1', '#e63946', '#1d3557'];
   const PATTERN_IDS = PATTERNS.map((p) => p.id), ACC_IDS = ACCESSORIES.map((a) => a.id), STYLE_IDS = SHIRT_STYLES.map((s) => s.id);
   const HEX_RE = /^#?[0-9a-f]{6}$/i;
@@ -336,11 +336,97 @@
       g.fillStyle = k.avg; g.fillRect(0, 0, w, h);
       const sc = Math.max(w / k.canvas.width, h / k.canvas.height), dw = k.canvas.width * sc, dh = k.canvas.height * sc;
       g.drawImage(k.canvas, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    }, null, null, (t) => { t.repeat.set(1 / PAD_W, 1 / PAD_H); t.offset.set(0.5, 0.5); });
+  }
+
+  // ---- v4: váy công chúa & vest. Quy ước như áo thường: u = 0 ≡ 1 là mặt TRƯỚC, u = 0.5 là mặt sau
+  function sparkle4(g, x, y, r) {
+    g.beginPath(); g.moveTo(x, y - r); g.quadraticCurveTo(x, y, x + r, y); g.quadraticCurveTo(x, y, x, y + r);
+    g.quadraticCurveTo(x, y, x - r, y); g.quadraticCurveTo(x, y, x, y - r); g.closePath(); g.fill();
+  }
+  const accOf = (st) => (cdist(st.shirt, st.accent) > 0.15 ? hex(st.accent) : hex(shade(st.accent, lum(st.accent) > 0.5 ? -0.35 : 0.5)));
+  function dressBodiceTex(st) {
+    return canvasTex('dressb:' + [st.shirt, st.accent].join(':'), 512, 256, (g, w, h) => {
+      const A = accOf(st);
+      g.fillStyle = hex(st.shirt); g.fillRect(0, 0, w, h);
+      // thân corset sáng hơn ở mặt trước + đường ghép
+      g.fillStyle = hex(shade(st.shirt, 0.22));
+      for (const x0 of [0, w]) {
+        g.beginPath(); g.moveTo(x0 - 70, 0); g.lineTo(x0 + 70, 0); g.lineTo(x0 + 46, h * 0.62); g.lineTo(x0 - 46, h * 0.62); g.closePath(); g.fill();
+        g.strokeStyle = hex(shade(st.shirt, -0.18)); g.lineWidth = 2;
+        for (const dx of [-70, -46, 46, 70]) { g.beginPath(); g.moveTo(x0 + dx * 0.7, 0); g.lineTo(x0 + dx * 0.66, h * 0.62); g.stroke(); }
+        g.fillStyle = A; g.beginPath(); g.arc(x0, h * 0.34, 12, 0, Math.PI * 2); g.fill();      // viên đá giữa ngực
+        g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x0 - 3, h * 0.32, 4, 0, Math.PI * 2); g.fill();
+        g.fillStyle = hex(shade(st.shirt, 0.22));
+      }
+      // dây lacing ở lưng
+      g.strokeStyle = A; g.lineWidth = 3;
+      for (let i = 0; i < 6; i++) { const y = h * (0.06 + i * 0.09); g.beginPath(); g.moveTo(w / 2 - 20, y); g.lineTo(w / 2 + 20, y + h * 0.07); g.moveTo(w / 2 + 20, y); g.lineTo(w / 2 - 20, y + h * 0.07); g.stroke(); }
+      // đai eo (phần thấp của thân; bị chân váy che dưới ~0.67)
+      g.fillStyle = A; g.fillRect(0, h * 0.56, w, h * 0.12);
+      g.fillStyle = 'rgba(255,255,255,0.55)'; g.fillRect(0, h * 0.56, w, 3);
+      // lấp lánh
+      g.fillStyle = 'rgba(255,255,255,0.85)';
+      for (let i = 0; i < 22; i++) sparkle4(g, (i * 97 + 31) % w, h * 0.1 + ((i * 53) % Math.round(h * 0.42)), 4 + (i % 3) * 2);
     });
   }
+  function suitJacketTex(st) {
+    return canvasTex('suitj:' + [st.shirt, st.accent].join(':'), 512, 256, (g, w, h) => {
+      const A = accOf(st), J = hex(st.shirt), JL = hex(shade(st.shirt, 0.14)), JD = hex(shade(st.shirt, -0.28));
+      g.fillStyle = J; g.fillRect(0, 0, w, h);
+      g.strokeStyle = 'rgba(255,255,255,0.07)'; g.lineWidth = 2;                       // sọc vải mảnh
+      for (let x = 7; x < w; x += 14) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
+      for (const x0 of [0, w]) {
+        // áo sơ mi trắng hình chữ V
+        g.fillStyle = '#f6f7fb'; g.beginPath(); g.moveTo(x0 - 34, 0); g.lineTo(x0 + 34, 0); g.lineTo(x0, h * 0.60); g.closePath(); g.fill();
+        // ve áo (lapel)
+        for (const sd of [-1, 1]) {
+          g.fillStyle = JL; g.beginPath(); g.moveTo(x0 + sd * 34, 0); g.lineTo(x0 + sd * 68, 0); g.lineTo(x0 + sd * 58, h * 0.34); g.lineTo(x0 + sd * 4, h * 0.60); g.closePath(); g.fill();
+          g.strokeStyle = JD; g.lineWidth = 2.5; g.beginPath(); g.moveTo(x0 + sd * 68, 0); g.lineTo(x0 + sd * 58, h * 0.34); g.lineTo(x0 + sd * 4, h * 0.60); g.stroke();
+        }
+        // cà vạt
+        g.fillStyle = A; g.beginPath(); g.moveTo(x0 - 8, h * 0.02); g.lineTo(x0 + 8, h * 0.02); g.lineTo(x0 + 6, h * 0.10); g.lineTo(x0 - 6, h * 0.10); g.closePath(); g.fill();
+        g.beginPath(); g.moveTo(x0 - 6, h * 0.10); g.lineTo(x0 + 6, h * 0.10); g.lineTo(x0 + 11, h * 0.46); g.lineTo(x0, h * 0.54); g.lineTo(x0 - 11, h * 0.46); g.closePath(); g.fill();
+        g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(x0 - 2, h * 0.12, 3, h * 0.32);
+      }
+      // túi ngực + khăn cài túi (cách mặt trước ~ 0.1u)
+      const px = w * 0.1;
+      g.fillStyle = JD; g.fillRect(px - 17, h * 0.42, 34, 5);
+      g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(px - 12, h * 0.42); g.lineTo(px - 6, h * 0.34); g.lineTo(px, h * 0.40); g.lineTo(px + 6, h * 0.33); g.lineTo(px + 12, h * 0.42); g.closePath(); g.fill();
+      g.fillStyle = A; g.fillRect(px - 12, h * 0.40, 24, 3);
+      // xẻ lưng + viền gấu
+      g.strokeStyle = JD; g.lineWidth = 3; g.beginPath(); g.moveTo(w * 0.5, h * 0.52); g.lineTo(w * 0.5, h); g.stroke();
+      g.fillStyle = JD; g.fillRect(0, h * 0.96, w, h * 0.04);
+    });
+  }
+  function skirtTex(st) {
+    if (st.kit && st.kit.shorts) return kitWrapTex('kshorts', st.kit.shorts, 256, 64);
+    return canvasTex('skirt:' + [st.shorts, st.accent].join(':'), 512, 128, (g, w, h) => {
+      const A = hex(st.accent), base = hex(st.shorts);
+      const gr = g.createLinearGradient(0, h, 0, 0);                                      // đáy = gấu váy (v = 0 ở dưới)
+      gr.addColorStop(0, hex(shade(st.shorts, 0.18))); gr.addColorStop(1, base);
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      g.strokeStyle = hex(shade(st.shorts, -0.12)); g.lineWidth = 2;
+      for (let i = 0; i < 16; i++) { const x = (i * w) / 16; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + (i % 2 ? 6 : -6), h); g.stroke(); }   // nếp xòe
+      g.fillStyle = 'rgba(255,255,255,0.8)';
+      for (let i = 0; i < 40; i++) sparkle4(g, (i * 67 + 13) % w, 6 + ((i * 29) % (h - 24)), 3 + (i % 3) * 1.6);
+      g.fillStyle = A; for (let i = 0; i < 16; i++) { g.beginPath(); g.arc((i + 0.5) * w / 16, h - 4, w / 36, Math.PI, 0); g.fill(); }  // viền sò ở gấu
+    });
+  }
+  const dressSkirtGeo = () => geo('dressSkirt', () => {
+    // từ gấu (dưới) lên eo (trên): xòe rộng như váy dạ hội công chúa
+    const pts = [[0.46, -0.26], [0.43, -0.205], [0.375, -0.13], [0.315, -0.065], [0.265, -0.015], [0.228, 0.025], [0.0, 0.032]].map((p) => new T.Vector2(p[0], p[1]));
+    return new T.LatheGeometry(new T.SplineCurve(pts).getPoints(24), 48);
+  });
+  const dressOverGeo = () => geo('dressOver', () => {
+    const pts = [[0.5, -0.19], [0.455, -0.13], [0.385, -0.065], [0.31, -0.005], [0.245, 0.035]].map((p) => new T.Vector2(p[0], p[1]));
+    return new T.LatheGeometry(new T.SplineCurve(pts).getPoints(20), 48);
+  });
   function shirtTex(st) {
     if (st.kit && st.kit.shirt) return kitWrapTex('kshirt', st.kit.shirt, 512, 256);
     const style = st.shirtStyle;
+    if (style === 'dress') return dressBodiceTex(st);
+    if (style === 'suit') return suitJacketTex(st);
     return canvasTex('shirt:' + [st.shirt, st.accent, st.num, style].join(':'), 512, 256, (g, w, h) => {
       const S = hex(st.shirt), A = hex(st.accent);
       g.fillStyle = S; g.fillRect(0, 0, w, h);
@@ -568,6 +654,7 @@
     const collar = mesh(torus(0.085, 0.022, 0, 8, 28), mAcc, chest, 0, 0.375, 0); collar.rotation.x = Math.PI / 2; collar.scale.set(1, 0.9, 1);
     const hem = mesh(torus(0.205, 0.017, 0, 8, 40), mAcc, chest, 0, -0.045, 0); hem.rotation.x = Math.PI / 2; hem.scale.set(1, 0.88, 1);
     const shorts = mesh(shortsGeo(), mShorts, hips, 0, 0, 0, 1, 1, 0.9); shorts.receiveShadow = true;
+    let skirt = null, overskirt = null; const skirtFx = [];
     const belt = mesh(torus(0.214, 0.012, 0, 6, 40), mat(shade(st.shorts, -0.3), { r: 0.6 }), hips, 0, 0.025, 0); belt.rotation.x = Math.PI / 2; belt.scale.set(1, 0.9, 1);
     if (sStyle === 'hoodie') {
       // mũ trùm cuộn sau gáy + túi mũ trên lưng + dây rút
@@ -585,6 +672,30 @@
       collar.scale.set(1.04, 0.95, 1.15);
     } else if (sStyle === 'tank') {
       collar.scale.set(1.12, 1, 1.25);
+    } else if (sStyle === 'dress') {
+      // ---- Váy xòe công chúa: thân corset + chân váy bồng 2 lớp + nơ lưng
+      shorts.visible = false; belt.visible = false; hem.visible = false;
+      collar.scale.set(1.08, 0.9, 1.2);
+      const mSkirt = mat(0xffffff, { r: 0.8, map: skirtTex(st), side: T.DoubleSide });
+      skirt = mesh(dressSkirtGeo(), mSkirt, hips, 0, 0, 0, 1, 1, 0.95); skirt.receiveShadow = true;
+      overskirt = mesh(dressOverGeo(), mat(0xffffff, { r: 0.9, op: 0.34, side: T.DoubleSide }), hips, 0, 0, 0, 1, 1, 0.95);
+      const waist = mesh(torus(0.226, 0.016, 0, 8, 44), mAcc, hips, 0, 0.03, 0); waist.rotation.x = Math.PI / 2; waist.scale.set(1, 0.9, 1);
+      const ruf1 = mesh(torus(0.455, 0.022, 0, 8, 56), mAcc, hips, 0, -0.255, 0); ruf1.rotation.x = Math.PI / 2; ruf1.scale.set(1, 0.95, 1);
+      const ruf2 = mesh(torus(0.49, 0.014, 0, 8, 56), mWhite, hips, 0, -0.19, 0); ruf2.rotation.x = Math.PI / 2; ruf2.scale.set(1, 0.95, 1);
+      skirtFx.push([ruf1, 0.455 / 0.455], [ruf2, 1]);
+      // nơ lớn ở lưng
+      for (const sd of [-1, 1]) {
+        const lobe = mesh(sph(14), mAcc, chest, sd * 0.065, 0.0, -0.205, 0.07, 0.04, 0.022); lobe.rotation.z = -sd * 0.3;
+        const tail = mesh(sph(10), mAcc, chest, sd * 0.03, -0.07, -0.2, 0.018, 0.075, 0.012); tail.rotation.z = sd * 0.25;
+      }
+      mesh(sph(12), mAcc, chest, 0, 0.0, -0.205, 0.032, 0.032, 0.026);
+    } else if (sStyle === 'suit') {
+      // ---- Vest lịch lãm: cổ sơ mi trắng, vạt áo khoác, 2 nút
+      collar.material = mWhite; collar.scale.set(1.1, 1, 1.22); hem.visible = false;
+      const tailG = geo('jacketTail', () => new T.CylinderGeometry(0.224, 0.242, 0.125, 44, 1, true));
+      const jt = mesh(tailG, mShirtPlain, chest, 0, -0.125, 0, 1, 1, 0.93); jt.receiveShadow = true;
+      mesh(torus(0.241, 0.007, 0, 6, 44), mat(shade(st.shirt, -0.28), { r: 0.6 }), chest, 0, -0.187, 0, 1, 0.93, 1).rotation.x = Math.PI / 2;
+      for (const by of [0.045, -0.005]) mesh(sph(10), mDark, chest, 0, by, 0.192, 0.014, 0.014, 0.01);
     }
     if (kind === 'turtle') {
       // mai rùa trên lưng – số áo in trên mai
@@ -610,11 +721,16 @@
     const clawM = kind === 'sloth' ? mat(0xf3ead8, { r: 0.45 }) : null;
     function makeArm(side) { // side: -1 phải, +1 trái
       const sh = group(torso, side * SH_X, SH_Y, 0);
-      mesh(sph(20), sStyle === 'tank' ? mLimb : mShirt, sh, 0, 0, 0, 0.068, 0.064, 0.068);     // vai áo
+      const longSl = sStyle === 'hoodie' || sStyle === 'suit';
+      mesh(sph(20), sStyle === 'tank' ? mLimb : (sStyle === 'suit' || sStyle === 'dress') ? mShirtPlain : mShirt, sh, 0, 0, 0, 0.068, 0.064, 0.068);     // vai áo
       const up = group(sh);
       let sleeve = null, sleeveHem = null, foSleeve = null;
-      if (sStyle === 'hoodie') {
+      if (longSl) {
         sleeve = mesh(cyl(0.064, 0.056, UPPER * 0.95, 16), mShirtPlain, up, 0, -UPPER * 0.47, 0);
+      } else if (sStyle === 'dress') {
+        // tay phồng công chúa
+        sleeve = mesh(sph(20), mShirtPlain, up, 0, -0.03, 0, 0.088, 0.072, 0.088);
+        sleeveHem = mesh(torus(0.058, 0.011, 0, 6, 20), mAcc, up, 0, -0.07, 0); sleeveHem.rotation.x = Math.PI / 2;
       } else if (sStyle !== 'tank') {
         const L = sStyle === 'jersey' ? 0.1 : 0.085;
         sleeve = mesh(cyl(0.062, 0.056, L, 16), mShirt, up, 0, -L / 2 + 0.002, 0);
@@ -625,11 +741,12 @@
       const fo = group(up, 0, -UPPER, 0);
       const foM = mesh(caps(0.043, FORE - 0.03), mLimb, fo, 0, -FORE / 2, 0);
       const band = mesh(cyl(0.05, 0.05, 0.045, 16), mAcc, fo, 0, -FORE + 0.055, 0);
-      if (sStyle === 'hoodie') {
+      if (longSl) {
         band.visible = false;
         foSleeve = group(fo);
-        mesh(cyl(0.057, 0.052, FORE * 0.72, 16), mShirtPlain, foSleeve, 0, -FORE * 0.36, 0);
-        const cuff = mesh(torus(0.05, 0.014, 0, 6, 20), mAcc, foSleeve, 0, -FORE * 0.72, 0); cuff.rotation.x = Math.PI / 2;
+        const fl = sStyle === 'suit' ? 0.5 : 0.72;
+        mesh(cyl(0.057, 0.052, FORE * fl, 16), mShirtPlain, foSleeve, 0, -FORE * fl / 2, 0);
+        const cuff = mesh(torus(0.05, sStyle === 'suit' ? 0.011 : 0.014, 0, 6, 20), sStyle === 'suit' ? mWhite : mAcc, foSleeve, 0, -FORE * fl, 0); cuff.rotation.x = Math.PI / 2;
       }
       const hand = group(fo, 0, -FORE, 0);
       if (kind === 'seal') {
@@ -658,9 +775,14 @@
     // ---- chân
     function makeLeg(side) {
       const th = group(hips, side * HIP_JX, HIP_JY, 0);
-      mesh(caps(0.074, THIGH - 0.06), mShortsPlain, th, 0, -THIGH / 2 + 0.01, 0);
+      mesh(caps(0.074, THIGH - 0.06), sStyle === 'dress' ? mLimb : mShortsPlain, th, 0, -THIGH / 2 + 0.01, 0);
       const sn = group(th, 0, -THIGH, 0);
-      mesh(caps(0.052, SHIN - 0.04), mLimb, sn, 0, -SHIN / 2, 0);
+      if (sStyle === 'suit') {
+        // ống quần tây dài tới mắt cá
+        mesh(cyl(0.084, 0.07, THIGH + 0.012, 18), mShortsPlain, th, 0, -THIGH / 2, 0);
+        mesh(cyl(0.071, 0.064, SHIN - 0.012, 18), mShortsPlain, sn, 0, -SHIN / 2 + 0.006, 0);
+        const tc = mesh(torus(0.064, 0.008, 0, 6, 20), mat(shade(st.shorts, -0.3), { r: 0.6 }), sn, 0, -SHIN + 0.012, 0); tc.rotation.x = Math.PI / 2;
+      } else mesh(caps(0.052, SHIN - 0.04), mLimb, sn, 0, -SHIN / 2, 0);
       const ank = group(sn, 0, -SHIN, 0);
       mesh(cyl(0.056, 0.058, 0.045, 14), mWhite, ank, 0, 0.022, 0);       // tất
       const shoe = group(ank);
@@ -818,6 +940,11 @@
       dt = clamp(dt || 0, 0, 0.1);
       s = s || EMPTY;
       time += dt;
+      if (skirt) {
+        const f = 1 + 0.022 * Math.sin(time * 2.3) + 0.09 * Math.min(1, locoAmp || 0);
+        skirt.scale.set(f, 1, f * 0.95); overskirt.scale.set(f * 1.03, 1, f * 0.98);
+        for (const e of skirtFx) e[0].scale.set(f, 0.95 * f, 1);
+      }
       if (reactT > 0) { reactT -= dt; if (reactT <= 0) reactMode = null; }
       const mode = reactMode || s.mode || 'ready';
       if (mode !== lastMode) { if (mode === 'celebrate') celebT = 0; lastMode = mode; }
