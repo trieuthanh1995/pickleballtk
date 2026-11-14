@@ -7,6 +7,30 @@
   let ctx = null, master = null, sfx = null, amb = null, comp = null, noiseBuf = null, pinkBuf = null;
   let muted = false, volume = 0.8;
   let ambWanted = { on: false, venue: null }, ambNodes = null;
+  /* ---------- nhạc nền: 1 bản lặp vô hạn, không bao giờ dừng/khởi động lại giữa các trận ---------- */
+  let musicEl = null, musicOn = true, musicVol = 0.5, musicStarted = false;
+  function musicEffVol() { return clamp(volume * musicVol * 1.6, 0, 1); }
+  function musicElement() {
+    if (!musicEl) {
+      try {
+        musicEl = new Audio('assets/music/bgm.mp3');
+        musicEl.loop = true; musicEl.preload = 'auto'; musicEl.setAttribute('playsinline', '');
+        musicEl.volume = musicEffVol();
+      } catch (e) { musicEl = null; }
+    }
+    return musicEl;
+  }
+  function musicStart() {
+    if (!musicOn) return;
+    const el = musicElement(); if (!el) return;
+    el.volume = musicEffVol();
+    if (!el.paused) { musicStarted = true; return; }
+    try { const pr = el.play(); if (pr && pr.then) pr.then(() => { musicStarted = true; }).catch(() => { /* chờ lần chạm kế tiếp */ }); } catch (e) { /* bỏ qua */ }
+  }
+  function musicStop() { if (musicEl && !musicEl.paused) { try { musicEl.pause(); } catch (e) { /* bỏ qua */ } } }
+  // trình duyệt chỉ cho phát tiếng sau khi người chơi chạm/bấm: thử lại ở mỗi lần chạm đầu tiên
+  ['pointerdown', 'touchend', 'keydown', 'click'].forEach((ev) => window.addEventListener(ev, () => { if (!musicStarted) musicStart(); }, { passive: true }));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) musicStop(); else if (musicStarted || musicOn) musicStart(); });
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const rnd = (a, b) => a + Math.random() * (b - a);
 
@@ -21,20 +45,19 @@
       sfx = ctx.createGain(); sfx.gain.value = 1;
       amb = ctx.createGain(); amb.gain.value = 0.0001;
       sfx.connect(comp); amb.connect(comp); comp.connect(master); master.connect(ctx.destination);
-      const n = ctx.sampleRate * 2;
-      noiseBuf = ctx.createBuffer(1, n, ctx.sampleRate);
-      const d = noiseBuf.getChannelData(0);
-      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
-      // noise hồng (tiếng đám đông/biển mềm hơn)
-      pinkBuf = ctx.createBuffer(1, n, ctx.sampleRate);
-      const p = pinkBuf.getChannelData(0);
+      const fade = Math.floor(ctx.sampleRate * 0.25), n = ctx.sampleRate * 3;
+      const white = new Float32Array(n), pk = new Float32Array(n);
       let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0;
       for (let i = 0; i < n; i++) {
-        const w = Math.random() * 2 - 1;
+        const w = Math.random() * 2 - 1; white[i] = w;
         b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852;
         b3 = 0.8665 * b3 + w * 0.3104856; b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
-        p[i] = (b0 + b1 + b2 + b3 + b4 + b5 + w * 0.5362) * 0.11;
+        pk[i] = (b0 + b1 + b2 + b3 + b4 + b5 + w * 0.5362) * 0.11;
       }
+      // trộn đuôi vào đầu để vòng lặp liền mạch
+      for (let i = 0; i < fade; i++) { const k = i / fade; pk[i] = pk[i] * k + pk[n - fade + i] * (1 - k); white[i] = white[i] * k + white[n - fade + i] * (1 - k); }
+      noiseBuf = ctx.createBuffer(1, n - fade, ctx.sampleRate); noiseBuf.getChannelData(0).set(white.subarray(0, n - fade));
+      pinkBuf = ctx.createBuffer(1, n - fade, ctx.sampleRate); pinkBuf.getChannelData(0).set(pk.subarray(0, n - fade));
       if (ambWanted.on) setTimeout(() => applyAmbience(), 0);
     }
     if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) { /* ignore */ } }
@@ -153,38 +176,57 @@
       noise(d, 0.025, 2400, 'bandpass', { q: 4, delay: at });
     }
   }
-  /* ---------- đám đông ---------- */
+  /* ---------- đám đông: nhiều "giọng" người mô phỏng bằng sóng răng cưa qua bộ lọc nguyên âm ---------- */
+  function babble(out, count, vol, o) {
+    o = o || {};
+    const c = ctx, mix = c.createGain(); mix.gain.value = vol;
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = o.lp || 2800; lp.Q.value = 0.3;
+    mix.connect(lp); lp.connect(out);
+    const nodes = [];
+    const F1 = o.f1 || [350, 800], F2 = o.f2 || [900, 2000], P = o.pitch || [110, 250];
+    for (let i = 0; i < count; i++) {
+      const osc = c.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = rnd(P[0], P[1]);
+      const vib = c.createOscillator(); vib.frequency.value = rnd(0.3, 1.5);
+      const vg = c.createGain(); vg.gain.value = osc.frequency.value * 0.05; vib.connect(vg); vg.connect(osc.frequency);
+      const f1 = c.createBiquadFilter(); f1.type = 'bandpass'; f1.frequency.value = rnd(F1[0], F1[1]); f1.Q.value = 4;
+      const f2 = c.createBiquadFilter(); f2.type = 'bandpass'; f2.frequency.value = rnd(F2[0], F2[1]); f2.Q.value = 5;
+      const fl = c.createOscillator(); fl.frequency.value = rnd(0.2, 0.9);
+      const fg = c.createGain(); fg.gain.value = f1.frequency.value * 0.3; fl.connect(fg); fg.connect(f1.frequency);
+      const amp = c.createGain(); amp.gain.value = 0.07;
+      const al = c.createOscillator(); al.frequency.value = rnd(2.2, 4.5);
+      const ag = c.createGain(); ag.gain.value = 0.04; al.connect(ag); ag.connect(amp.gain);
+      osc.connect(f1); osc.connect(f2); f1.connect(amp); f2.connect(amp); amp.connect(mix);
+      osc.start(); vib.start(); fl.start(); al.start();
+      nodes.push(osc, vib, fl, al);
+    }
+    return { stop(t) { for (const n of nodes) { try { n.stop(t); } catch (e) { /* đã dừng */ } } } };
+  }
+  function clap(delay, vol) {
+    noise(0.035, vol, rnd(1500, 2600), 'bandpass', { q: 0.7, delay, attack: 0.004 });
+    noise(0.05, vol * 0.5, 700, 'lowpass', { q: 0.5, delay, attack: 0.004 });
+  }
   function cheer(level) {
     const c = live(); if (!c) return;
     const lv = clamp(level === undefined ? 0.7 : +level, 0.05, 1);
-    const dur = 1.2 + lv * 1.6;
-    noise(dur, 0.11 + lv * 0.16, 1100, 'bandpass', { q: 0.6, pink: true, attack: 0.25 });
-    noise(dur * 0.9, 0.06 + lv * 0.08, 2600, 'bandpass', { q: 0.8, attack: 0.2 });
-    noise(dur * 0.8, 0.05 + lv * 0.06, 420, 'bandpass', { q: 0.8, pink: true, attack: 0.3 });
-    // tiếng huýt/reo lẻ tẻ
-    const n = Math.round(2 + lv * 6);
-    for (let i = 0; i < n; i++) {
-      const at = rnd(0.05, dur * 0.6), f = rnd(900, 1900);
-      tone(f, rnd(0.15, 0.35), 'sine', 0.025 + lv * 0.02, f * rnd(1.15, 1.5), at);
-    }
-    for (let i = 0; i < Math.round(lv * 8); i++) noise(0.012, 0.08, 1500, 'bandpass', { delay: rnd(0.1, dur * 0.7), q: 1 }); // vỗ tay
+    const dur = 1.3 + lv * 1.7, t = c.currentTime;
+    const g = c.createGain(); g.connect(sfx);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(1, t + 0.35);
+    g.gain.setValueAtTime(1, t + dur * 0.55); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    const h = babble(g, 10 + Math.round(lv * 8), 0.9 + lv * 0.8, { pitch: [130, 300], f1: [500, 900], f2: [1100, 2300] });
+    h.stop(t + dur + 0.1);
+    // vỗ tay rải rác, đậm dần rồi thưa dần
+    const n = Math.round(6 + lv * 22);
+    for (let i = 0; i < n; i++) { const at = 0.1 + Math.pow(Math.random(), 0.8) * dur * 0.85; clap(at, 0.05 + lv * 0.05); }
+    // vài tiếng huýt cao lẻ tẻ
+    for (let i = 0; i < Math.round(1 + lv * 3); i++) { const f = rnd(1000, 1700); tone(f, rnd(0.2, 0.35), 'sine', 0.02 + lv * 0.015, f * rnd(1.2, 1.5), rnd(0.1, dur * 0.6)); }
   }
   function ooh() {
     const c = live(); if (!c) return;
-    const t = c.currentTime, dur = 1.1;
-    const f1 = c.createBiquadFilter(); f1.type = 'bandpass'; f1.frequency.value = 450; f1.Q.value = 3;
-    const f2 = c.createBiquadFilter(); f2.type = 'bandpass'; f2.frequency.value = 850; f2.Q.value = 4;
-    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    const g2 = c.createGain(); g2.gain.value = 0.5;
-    f1.connect(g); f2.connect(g2); g2.connect(g); g.connect(sfx);
-    for (let i = 0; i < 9; i++) {
-      const o = c.createOscillator(); o.type = 'sawtooth';
-      const b = rnd(150, 290);
-      o.frequency.setValueAtTime(b, t); o.frequency.linearRampToValueAtTime(b * 1.12, t + 0.35); o.frequency.linearRampToValueAtTime(b * 0.92, t + dur);
-      const og = c.createGain(); og.gain.value = 0.06;
-      o.connect(og); og.connect(f1); og.connect(f2); o.start(t + rnd(0, 0.06)); o.stop(t + dur + 0.05);
-    }
-    noise(dur, 0.05, 600, 'bandpass', { q: 1, pink: true, attack: 0.25 });
+    const t = c.currentTime, dur = 1.2;
+    const g = c.createGain(); g.connect(sfx);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(1, t + 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    const h = babble(g, 9, 1.1, { pitch: [120, 220], f1: [300, 450], f2: [700, 1000], lp: 1800 });
+    h.stop(t + dur + 0.1);
   }
 
   /* ---------- âm nền theo bối cảnh ---------- */
@@ -219,16 +261,11 @@
     const cfg = AMB[ambWanted.venue] || AMB.gym;
     const list = [];
     if (cfg.crowd) {
-      list.push(loopNoise(pinkBuf, 'bandpass', cfg.crowdF, 0.7, cfg.crowd, 0.13, 0.35));
-      list.push(loopNoise(noiseBuf, 'bandpass', cfg.crowdF * 2.4, 1.2, cfg.crowd * 0.25, 0.21, 0.5));
+      list.push({ s: babble(amb, 12, cfg.crowd * 2.6, { pitch: [100, 230], lp: 2200 }), lfo: null });
+      list.push(loopNoise(pinkBuf, 'lowpass', 450, 0.4, cfg.crowd * 0.18, 0.1, 0.3));
     }
-    if (cfg.sea) list.push(loopNoise(pinkBuf, 'lowpass', 520, 0.5, cfg.sea, 0.09, 0.85));
-    if (cfg.wind) list.push(loopNoise(pinkBuf, 'bandpass', 380, 0.6, cfg.wind, 0.07, 0.8));
-    if (cfg.hum) {
-      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 100;
-      const g = ctx.createGain(); g.gain.value = cfg.hum; o.connect(g); g.connect(amb); o.start();
-      list.push({ s: o, lfo: null });
-    }
+    if (cfg.sea) list.push(loopNoise(pinkBuf, 'lowpass', 380, 0.4, cfg.sea * 0.55, 0.09, 0.85));
+    if (cfg.wind) list.push(loopNoise(pinkBuf, 'bandpass', 300, 0.35, cfg.wind * 0.5, 0.07, 0.8));
     let timer = null;
     if (cfg.birds) {
       timer = setInterval(() => {
@@ -247,6 +284,7 @@
   }
 
   function setMasterGain() {
+    if (musicEl) musicEl.volume = musicEffVol();
     if (!ctx) return;
     const t = ctx.currentTime;
     master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t);
@@ -254,7 +292,11 @@
   }
 
   PP.Audio = {
-    unlock: ensure,
+    unlock() { musicStart(); return ensure(); },
+    musicStart,
+    setMusicOn(m) { musicOn = !!m; if (musicOn) musicStart(); else musicStop(); },
+    setMusicVolume(v) { musicVol = clamp(+v || 0, 0, 1); if (musicEl) musicEl.volume = musicEffVol(); },
+    get musicOn() { return musicOn; },
     /** hit(power) kiểu cũ, hoặc hit(kind, quality, power) */
     hit(a, b, c) {
       if (typeof a === 'number' || a === undefined || a === null) return paddle('drive', 'good', a || 1);
@@ -273,6 +315,7 @@
     click() { tone(880, 0.04, 'triangle', 0.1); tone(1320, 0.03, 'sine', 0.04, null, 0.015); },
     win() { [523, 659, 784, 1047].forEach((f, i) => { tone(f, 0.24, 'triangle', 0.15, null, i * 0.12); tone(f * 2, 0.18, 'sine', 0.04, null, i * 0.12 + 0.01); }); },
     lose() { [392, 330, 262].forEach((f, i) => tone(f, 0.32, 'triangle', 0.13, f * 0.97, i * 0.16)); },
+    /** setMuted: chỉ tắt ÂM THANH HIỆU ỨNG (tiếng vợt, bóng, khán giả...). Nhạc nền dùng setMusicOn */
     setMuted(m) { muted = !!m; setMasterGain(); },
     setVolume(v) { volume = clamp(+v || 0, 0, 1); setMasterGain(); },
     get muted() { return muted; },

@@ -30,6 +30,7 @@
         <button class="btn big cup" data-act="cup">🏆 Giải đấu</button>
         <button class="btn big online" data-act="online">🌐 Chơi online</button>
         <button class="btn" data-act="wardrobe">👕 Tủ đồ</button>
+        <button class="btn vip" data-act="vip">👑 Tủ đồ VIP (thay kit)</button>
         <div class="btn-row tight even"><button class="btn" data-act="help">📖 Hướng dẫn</button><button class="btn" data-act="settings">⚙️ Cài đặt</button></div>
         <button class="btn ghost" id="btn-sound">🔊 Âm thanh: Bật</button>
       </div>
@@ -175,6 +176,32 @@
     </div>
   </section>
 
+  <!-- ========== TỦ ĐỒ VIP (thay KIT bằng ảnh của bạn) ========== -->
+  <section id="scr-vip" class="screen hidden">
+    <div class="card wide wardrobe">
+      <div class="wd-left">
+        <canvas id="vip-canvas"></canvas>
+        <div class="wd-name" id="vip-name"></div>
+        <div class="seg small" id="vip-anim"><button data-v="ready" class="sel">Đứng</button><button data-v="swing">Vung vợt</button><button data-v="celebrate">Ăn mừng</button></div>
+      </div>
+      <div class="wd-right scroll">
+        <h2>👑 Tủ đồ VIP</h2>
+        <p class="vip-hint">Đưa ảnh KIT áo, quần, vợt vào để thay đồ cho nhân vật, giống thay kit trong Dream League Soccer. Ảnh chỉ lưu trên máy này.</p>
+        <h3>Nhân vật</h3>
+        <div class="char-grid mini" id="vip-chars"></div>
+        <h3>Áp dụng kit cho</h3>
+        <div class="seg" id="vip-scope"><button data-v="char">Nhân vật này</button><button data-v="all">Tất cả nhân vật</button></div>
+        <div id="vip-slots"></div>
+        <input type="file" id="vip-file" accept="image/*" class="hidden">
+        <div class="btn-row">
+          <button class="btn ghost" id="vip-clear">🗑 Xóa kit đang chọn</button>
+          <button class="btn big primary" id="vip-done">Xong</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
   <!-- ========== CÀI ĐẶT ========== -->
   <section id="scr-settings" class="screen hidden dim">
     <div class="card wide scroll">
@@ -183,7 +210,10 @@
         <label>Chất lượng đồ họa
           <div class="seg" id="set-quality"><button data-v="auto">Tự động</button><button data-v="low">Thấp</button><button data-v="medium">Vừa</button><button data-v="high">Cao</button></div>
         </label>
-        <label>Âm lượng <input type="range" id="set-volume" min="0" max="100" step="5"></label>
+        <label class="check"><input type="checkbox" id="set-music"> 🎵 Nhạc nền</label>
+        <label class="check"><input type="checkbox" id="set-sfx"> 🔊 Âm thanh hiệu ứng (tiếng vợt, bóng, khán giả…)</label>
+        <label>Âm lượng chung <input type="range" id="set-volume" min="0" max="100" step="5"></label>
+        <label>Âm lượng nhạc nền <input type="range" id="set-musicvol" min="0" max="100" step="5"></label>
         <label class="check"><input type="checkbox" id="set-ring"> Vòng canh thời điểm</label>
         <label class="check"><input type="checkbox" id="set-landing"> Dấu điểm rơi của bóng</label>
         <label class="check"><input type="checkbox" id="set-hitstop"> Khựng hình khi đánh PERFECT (offline)</label>
@@ -368,6 +398,7 @@
 
   <!-- ========== CẢM ỨNG ========== -->
   <div id="touch" class="hidden">
+    <div id="joy-zone"></div>
     <div id="joy"><div id="joy-knob"></div></div>
     <div id="shot-btns">
       <button data-shot="lob" class="sb lob">Lob</button>
@@ -411,6 +442,7 @@
   <script src="./assets/protocol.js"></script>
   <script src="./assets/audio.js"></script>
   <script src="./assets/world.js"></script>
+  <script src="./assets/kit.js"></script>
   <script src="./assets/character.js"></script>
   <script src="./assets/input.js"></script>
   <script src="./assets/net.js"></script>

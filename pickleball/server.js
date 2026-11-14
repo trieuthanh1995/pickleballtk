@@ -11,7 +11,7 @@ const ROOT = __dirname;
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml',
-  '.png': 'image/png', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2',
+  '.mp3': 'audio/mpeg', '.png': 'image/png', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2',
 };
 
 const server = http.createServer((req, res) => {
@@ -22,14 +22,26 @@ const server = http.createServer((req, res) => {
   // chỉ cho phép đọc index.html và thư mục assets
   const okPath = file === path.join(ROOT, 'index.html') || file.startsWith(path.join(ROOT, 'assets') + path.sep);
   if (!okPath) { res.writeHead(404); return res.end('Not found'); }
-  fs.readFile(file, (err, data) => {
-    if (err) { res.writeHead(404); return res.end('Not found'); }
+  fs.stat(file, (err, st) => {
+    if (err || !st.isFile()) { res.writeHead(404); return res.end('Not found'); }
     const ext = path.extname(file).toLowerCase();
-    res.writeHead(200, {
+    const headers = {
       'Content-Type': TYPES[ext] || 'application/octet-stream',
-      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600',
-    });
-    res.end(data);
+      'Cache-Control': ext === '.html' ? 'no-cache' : ext === '.mp3' ? 'public, max-age=86400' : 'public, max-age=3600',
+      'Accept-Ranges': 'bytes',
+    };
+    // iPhone/Safari bắt buộc server hỗ trợ "Range" thì mới phát được nhạc
+    const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (m && (m[1] || m[2])) {
+      let start = m[1] ? parseInt(m[1], 10) : Math.max(0, st.size - parseInt(m[2], 10));
+      let end = m[1] && m[2] ? parseInt(m[2], 10) : st.size - 1;
+      if (end >= st.size) end = st.size - 1;
+      if (start > end || start >= st.size) { res.writeHead(416, { 'Content-Range': 'bytes */' + st.size }); return res.end(); }
+      res.writeHead(206, Object.assign(headers, { 'Content-Range': 'bytes ' + start + '-' + end + '/' + st.size, 'Content-Length': end - start + 1 }));
+      return fs.createReadStream(file, { start, end }).pipe(res);
+    }
+    res.writeHead(200, Object.assign(headers, { 'Content-Length': st.size }));
+    fs.createReadStream(file).pipe(res);
   });
 });
 gameServer.attach(server);

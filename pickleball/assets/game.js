@@ -13,7 +13,7 @@
   const CONTACT_REACH = 1.3;   // tầm với thực tế của nhân vật (vai → mặt vợt + dịch thân)
 
   /* ================= Lưu trữ ================= */
-  const DEFAULT_SETTINGS = { quality: 'auto', volume: 80, ring: true, landing: true, hitstop: true, shake: true, rules: true };
+  const DEFAULT_SETTINGS = { quality: 'auto', volume: 80, music: true, sfx: true, musicVol: 50, ring: true, landing: true, hitstop: true, shake: true, rules: true };
   const Save = {
     data: { wins: 0, losses: 0, char: 'bunny', level: 'pro', venue: 'gym', target: 7, scoring: 'sideout', mode: 1, muted: false, name: '', deviceId: '', settings: {}, looks: {} },
     load() {
@@ -46,7 +46,12 @@
 
   /* ================= Trang phục (look) ================= */
   const pickOne = (a) => a[(Math.random() * a.length) | 0];
-  function myLook(id) { return Object.assign({}, Save.data.looks[id || Save.data.char] || {}); }
+  function myLook(id) {
+    const cid = id || Save.data.char;
+    const l = Object.assign({}, Save.data.looks[cid] || {});
+    if (PP.Kit && PP.Kit.has(cid)) l.kit = true;     // có kit VIP: nhân vật của mình mặc kit (chỉ hiển thị trên máy này)
+    return l;
+  }
   function fullLook(id) {
     const d = PP.Character.defaultLook ? PP.Character.defaultLook(id) : {};
     return Object.assign({}, d, myLook(id));
@@ -822,7 +827,7 @@
     const tr = d.trophies || {};
     const cups = CUP_TIERS.map((t) => (tr[t.id] ? t.icon + '×' + tr[t.id] : '')).filter(Boolean).join(' ');
     $('#main-stats').textContent = `Thắng ${d.wins} · Thua ${d.losses}` + (cups ? ' · Cúp ' + cups : '');
-    $('#btn-sound').textContent = d.muted ? '🔇 Âm thanh: Tắt' : '🔊 Âm thanh: Bật';
+    $('#btn-sound').textContent = (!S().music && !S().sfx) ? '🔇 Âm thanh: Tắt' : '🔊 Âm thanh: Bật';
   }
 
   function startOffline(cupCfg) {
@@ -1093,8 +1098,87 @@
     Save.data.matchesStarted = (Save.data.matchesStarted || 0) + 1;
     Save.save();
     // 3 trận đầu: mở sẵn để người mới đọc; sau đó thu gọn thành nút 📘
-    $('#rules-panel').classList.toggle('collapsed', Save.data.matchesStarted > 3);
+    $('#rules-panel').classList.toggle('collapsed', Save.data.matchesStarted > 3 || PP.Input.isTouch());   // điện thoại: thu gọn sẵn để không che nút di chuyển
     rulesText = '';
+  }
+
+  /* ================= Âm thanh: nhạc nền và hiệu ứng tắt/mở riêng ================= */
+  function applyAudioSettings() {
+    const st = S();
+    A.setMuted(!st.sfx);
+    A.setVolume(st.volume / 100);
+    A.setMusicVolume(st.musicVol / 100);
+    A.setMusicOn(!!st.music);
+  }
+
+  /* ================= Tủ đồ VIP: thay kit bằng ảnh của người chơi ================= */
+  let vipPreview = null, vipChar = 'bunny', vipScope = 'char', vipSlot = 'shirt';
+  const VIP_SLOTS = [
+    ['shirt', '👕 Áo', 'Ảnh áo: giữa ảnh là mặt trước, hai mép ảnh là mặt sau'],
+    ['shorts', '🩳 Quần', 'Ảnh quần, quấn quanh hông'],
+    ['paddle', '🏓 Vợt', 'Ảnh dán lên mặt vợt'],
+  ];
+  const vipScopeId = () => (vipScope === 'all' ? 'all' : vipChar);
+  function openVip() {
+    closeSetupPreview();
+    vipChar = Save.data.char;
+    UI.show('scr-vip');
+    if (!vipPreview && PP.Character.createPreview) {
+      try { vipPreview = PP.Character.createPreview($('#vip-canvas')); } catch (e) { vipPreview = null; }
+    }
+    vipRender();
+  }
+  function vipRender() {
+    UI.charGrid($('#vip-chars'), vipChar, Save.data.wins, (id) => { vipChar = id; Save.data.char = id; Save.save(); vipRender(); });
+    UI.$$('#vip-scope button').forEach((b) => b.classList.toggle('sel', b.dataset.v === vipScope));
+    const box = $('#vip-slots'); box.textContent = '';
+    const scope = vipScopeId();
+    for (const [slot, title, hint] of VIP_SLOTS) {
+      const mine = PP.Kit.own(scope, slot);
+      const eff = PP.Kit.get(vipChar, slot);
+      const card = document.createElement('div'); card.className = 'vip-slot';
+      let th;
+      if (eff) { th = document.createElement('canvas'); th.width = th.height = 88; const g = th.getContext('2d'); const k = eff.canvas, sc = Math.min(88 / k.width, 88 / k.height); g.drawImage(k, (88 - k.width * sc) / 2, (88 - k.height * sc) / 2, k.width * sc, k.height * sc); th.className = 'vip-thumb'; }
+      else { th = document.createElement('div'); th.className = 'vip-thumb'; th.textContent = '➕'; }
+      th.onclick = () => vipPick(slot);
+      const info = document.createElement('div');
+      const h4 = document.createElement('h4'); h4.textContent = title;
+      const st = document.createElement('div'); st.className = 'vip-status';
+      st.textContent = mine ? (scope === 'all' ? 'Đang dùng kit chung cho mọi nhân vật' : 'Đang dùng kit riêng của nhân vật này')
+        : (eff ? 'Đang dùng kit chung (từ mục "Tất cả")' : hint);
+      const row = document.createElement('div'); row.className = 'vip-actions';
+      const bPick = document.createElement('button'); bPick.className = 'btn tiny primary'; bPick.textContent = '📁 Chọn ảnh'; bPick.onclick = () => vipPick(slot);
+      const bDel = document.createElement('button'); bDel.className = 'btn tiny ghost'; bDel.textContent = 'Xóa'; bDel.onclick = () => { A.click(); PP.Kit.clear(scope, slot); vipRender(); };
+      const bTpl = document.createElement('button'); bTpl.className = 'btn tiny ghost'; bTpl.textContent = '⬇ Ảnh mẫu'; bTpl.onclick = () => vipTemplate(slot);
+      row.append(bPick, bDel, bTpl);
+      info.append(h4, st, row);
+      card.append(th, info);
+      box.append(card);
+    }
+    vipRefresh();
+  }
+  function vipRefresh() {
+    $('#vip-name').textContent = CHAR(vipChar).name;
+    if (vipPreview) vipPreview.set(CHAR(vipChar), fullLook(vipChar));
+  }
+  function vipPick(slot) { A.click(); vipSlot = slot; const f = $('#vip-file'); f.value = ''; f.click(); }
+  function vipTemplate(slot) {
+    A.click();
+    try {
+      const cv = PP.Kit.template(slot);
+      cv.toBlob((b) => {
+        if (!b) return;
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'kit-mau-' + slot + '.png';
+        document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      }, 'image/png');
+    } catch (e) { UI.toast('Không tạo được ảnh mẫu'); }
+  }
+  function closeVip() {
+    A.click();
+    if (vipPreview) { try { vipPreview.dispose(); } catch (e) { /* bỏ qua */ } vipPreview = null; }
+    refreshPortrait(vipChar);
+    if (mode === 'menu') buildMenuScene();
+    refreshMainStats(); UI.show('scr-main');
   }
 
   /* ================= Cài đặt ================= */
@@ -1107,6 +1191,12 @@
       PP.World.applyQuality(renderer, quality());
       UI.toast('Đã chuyển đồ họa: ' + ({ low: 'Thấp', medium: 'Vừa', high: 'Cao' })[quality()]);
     });
+    $('#set-music').checked = !!st.music;
+    $('#set-music').onchange = () => { st.music = $('#set-music').checked; applyAudioSettings(); Save.save(); refreshMainStats(); };
+    $('#set-sfx').checked = !!st.sfx;
+    $('#set-sfx').onchange = () => { st.sfx = $('#set-sfx').checked; applyAudioSettings(); Save.save(); refreshMainStats(); if (st.sfx) A.click(); };
+    $('#set-musicvol').value = st.musicVol;
+    $('#set-musicvol').oninput = () => { st.musicVol = +$('#set-musicvol').value; applyAudioSettings(); Save.save(); };
     $('#set-volume').value = st.volume;
     $('#set-volume').oninput = () => { st.volume = +$('#set-volume').value; A.setVolume && A.setVolume(st.volume / 100); Save.save(); };
     const bindCheck = (id, key) => { const el = $(id); el.checked = !!st[key]; el.onchange = () => { st[key] = el.checked; Save.save(); }; };
@@ -1504,7 +1594,17 @@
     $('#cup-play').onclick = () => { A.unlock(); A.click(); Cup.play(); };
     $('[data-act="online"]').onclick = () => { A.unlock(); A.click(); goOnline(); };
     $('[data-act="help"]').onclick = () => { A.click(); UI.show('scr-help'); };
-    $('#btn-sound').onclick = () => { Save.data.muted = !Save.data.muted; A.setMuted(Save.data.muted); Save.save(); refreshMainStats(); A.click(); };
+    $('[data-act="vip"]').onclick = () => { A.unlock(); A.click(); openVip(); };
+    $('#vip-done').onclick = closeVip;
+    $('#vip-clear').onclick = () => { A.click(); PP.Kit.clear(vipScopeId()); vipRender(); };
+    UI.seg($('#vip-scope'), 'char', (v) => { vipScope = v; vipRender(); });
+    UI.seg($('#vip-anim'), 'ready', (v) => { if (vipPreview && vipPreview.setAnim) vipPreview.setAnim(v); });
+    $('#vip-file').onchange = () => {
+      const f = $('#vip-file').files && $('#vip-file').files[0]; if (!f) return;
+      PP.Kit.add(f, vipScopeId(), vipSlot).then(() => { UI.toast('Đã thay kit!'); vipRender(); })
+        .catch((e) => UI.toast(e && e.message ? e.message : 'Không thêm được ảnh'));
+    };
+    $('#btn-sound').onclick = () => { const st = S(), on = !st.music && !st.sfx; st.music = on; st.sfx = on; Save.data.muted = !on; applyAudioSettings(); Save.save(); refreshMainStats(); A.click(); };
     $('#btn-start').onclick = () => { A.unlock(); A.click(); closeSetupPreview(); startOffline(); };
     UI.$$('[data-act="settings"]').forEach((b) => b.onclick = () => { A.click(); openSettings(); });
     $('#btn-settings-close').onclick = closeSettings;
@@ -1685,8 +1785,11 @@
     });
     try {
       Save.load();
-      A.setMuted(Save.data.muted);
-      if (A.setVolume) A.setVolume(S().volume / 100);
+      try { if (PP.Kit) await PP.Kit.init(); } catch (e) { /* bỏ qua */ }
+      // bản lưu cũ chỉ có nút tắt chung: chuyển thành tắt cả nhạc và hiệu ứng
+      if (Save.data.muted && !(Save.data.audioV2)) { S().music = false; S().sfx = false; }
+      Save.data.audioV2 = true; Save.save();
+      applyAudioSettings();
       await bootStep('Đang khởi tạo đồ họa…');
       try { initRenderer(); }
       catch (e) { bootFail('Trình duyệt không hỗ trợ WebGL. Hãy bật "Tăng tốc phần cứng" hoặc dùng Chrome/Edge/Safari bản mới.'); return; }

@@ -85,6 +85,16 @@
     if (look.number != null && isFinite(+look.number)) st.num = clamp(Math.round(+look.number), 0, 99);
     if (look.accessory === 'none') st.acc = null;
     else if (ACC_IDS.indexOf(look.accessory) >= 2) st.acc = look.accessory;
+    // Tủ đồ VIP: ảnh KIT của người chơi (chỉ khi look.kit bật, tức là nhân vật của chính mình trên máy này)
+    if (look.kit && PP.Kit && def.id) {
+      const k = PP.Kit.resolve(def.id);
+      if (k.shirt || k.shorts || k.paddle) {
+        st.kit = k;
+        if (k.shirt) st.shirt = colorOf(k.shirt.avg, st.shirt);      // tay áo lấy màu trung bình của kit
+        if (k.shorts) st.shorts = colorOf(k.shorts.avg, st.shorts);
+        if (k.paddle) st.paddle = colorOf(k.paddle.avg, st.paddle);
+      }
+    }
     return st;
   }
   function defaultLook(id) {
@@ -314,7 +324,22 @@
     for (let i = -2; i < 4; i++) { g.beginPath(); g.moveTo(i * 24, h); g.lineTo(i * 24 + h, 0); g.stroke(); }
   }, 1, 3);
 
+  // kit của người chơi: ảnh được quấn quanh thân, giữa ảnh là mặt trước
+  function kitWrapTex(tag, k, w, h) {
+    return canvasTex(tag + ':' + k.key, w, h, (g) => {
+      g.fillStyle = k.avg; g.fillRect(0, 0, w, h);
+      g.drawImage(k.canvas, -w / 2, 0, w, h); g.drawImage(k.canvas, w / 2, 0, w, h);
+    });
+  }
+  function kitPaddleTex(k) {
+    return canvasTex('kpad:' + k.key, 160, 230, (g, w, h) => {
+      g.fillStyle = k.avg; g.fillRect(0, 0, w, h);
+      const sc = Math.max(w / k.canvas.width, h / k.canvas.height), dw = k.canvas.width * sc, dh = k.canvas.height * sc;
+      g.drawImage(k.canvas, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    });
+  }
   function shirtTex(st) {
+    if (st.kit && st.kit.shirt) return kitWrapTex('kshirt', st.kit.shirt, 512, 256);
     const style = st.shirtStyle;
     return canvasTex('shirt:' + [st.shirt, st.accent, st.num, style].join(':'), 512, 256, (g, w, h) => {
       const S = hex(st.shirt), A = hex(st.accent);
@@ -380,6 +405,7 @@
     });
   }
   function shortsTex(st) {
+    if (st.kit && st.kit.shorts) return kitWrapTex('kshorts', st.kit.shorts, 256, 64);
     return canvasTex('shorts:' + st.shorts + ':' + st.accent, 256, 64, (g, w, h) => {
       g.fillStyle = hex(st.shorts); g.fillRect(0, 0, w, h);
       g.fillStyle = hex(st.accent);
@@ -526,7 +552,7 @@
     const mBlush = mat(st.blush, { r: 0.9, op: 0.55 });
     const mDark = mat(0x23202a, { r: 0.4 });
     const paddleColor = st.paddle;
-    const mPadFace = mat(0xffffff, { r: 0.45, map: paddleTex(paddleColor, st.accent, st.pattern) });
+    const mPadFace = mat(0xffffff, { r: 0.45, map: (st.kit && st.kit.paddle) ? kitPaddleTex(st.kit.paddle) : paddleTex(paddleColor, st.accent, st.pattern) });
     const mEdge = mat(st.edge, { r: 0.4 });
     const mGrip = mat(0xffffff, { r: 0.85, map: gripTex() });
 

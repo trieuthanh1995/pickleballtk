@@ -63,8 +63,9 @@
   }
 
   function setupTouch() {
-    const base = document.getElementById('joy'), knob = document.getElementById('joy-knob');
-    if (!base) return;
+    // Nút di chuyển nổi: chạm vào vùng 1/4 góc dưới bên trái -> nút hiện ra tại điểm chạm, kéo để di chuyển
+    const base = document.getElementById('joy'), knob = document.getElementById('joy-knob'), zone = document.getElementById('joy-zone');
+    if (!base || !zone) return;
     let id = null, cx = 0, cy = 0;
     const R = 50;
     function move(e) {
@@ -76,17 +77,23 @@
     }
     function end(e) {
       if (e.pointerId !== id) return;
-      id = null; joy.x = joy.y = 0; knob.style.transform = '';
+      id = null; joy.x = joy.y = 0; knob.style.transform = ''; base.classList.remove('show');
     }
-    base.addEventListener('pointerdown', (e) => {
+    zone.addEventListener('pointerdown', (e) => {
+      if (id !== null) return;
       e.preventDefault();
-      id = e.pointerId; base.setPointerCapture(id);
-      const r = base.getBoundingClientRect(); cx = r.left + r.width / 2; cy = r.top + r.height / 2;
+      id = e.pointerId;
+      try { zone.setPointerCapture(id); } catch (er) { /* bỏ qua */ }
+      cx = e.clientX; cy = e.clientY;
+      base.style.left = cx + 'px'; base.style.top = cy + 'px';
+      base.classList.add('show');
       move(e);
     });
-    base.addEventListener('pointermove', (e) => { if (e.pointerId === id) move(e); });
-    base.addEventListener('pointerup', end);
-    base.addEventListener('pointercancel', end);
+    zone.addEventListener('pointermove', (e) => { if (e.pointerId === id) move(e); });
+    zone.addEventListener('pointerup', end);
+    zone.addEventListener('pointercancel', end);
+    zone.addEventListener('lostpointercapture', end);
+    zone.addEventListener('contextmenu', (e) => e.preventDefault());
     document.querySelectorAll('[data-shot]').forEach((btn) => {
       btn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
