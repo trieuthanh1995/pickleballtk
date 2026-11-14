@@ -61,11 +61,11 @@ const humansOnline = (room) => room.members.filter((m) => players.get(m.pid) && 
 
 function roomState(room) {
   return {
-    t: 'room_state', code: room.code, mode: room.mode, quick: room.quick, hostId: room.hostId,
+    t: 'room_state', code: room.code, mode: room.mode, quick: room.quick, priv: !!room.priv, hostId: room.hostId,
     settings: room.settings, fillBots: room.fillBots, botLevel: room.botLevel, inMatch: room.inMatch,
     players: room.members.map((m) => {
       const p = players.get(m.pid);
-      return { id: m.pid, name: p.name, char: p.char, team: m.team, ready: m.ready, connected: !!p.conn };
+      return { id: m.pid, name: p.name, char: p.char, team: m.team, ready: m.ready, connected: !!p.conn, voice: !!p.voice, vmuted: !!p.vmuted };
     }),
   };
 }
@@ -86,10 +86,10 @@ function pickTeam(room) {
   if (b >= size) return 'A';
   return a <= b ? 'A' : 'B';
 }
-function createRoom(host, mode, settings, quick) {
+function createRoom(host, mode, settings, quick, priv) {
   leaveRoom(host);
   const room = {
-    code: genCode(), mode, settings, hostId: host.pid, fillBots: false, botLevel: 'pro', quick: !!quick,
+    code: genCode(), mode, settings, hostId: host.pid, fillBots: false, botLevel: 'pro', quick: !!quick, priv: !!priv,
     members: [], spectators: new Set(), match: null, inMatch: false, rematch: new Set(), lobbyTimers: new Map(),
   };
   rooms.set(room.code, room);
@@ -110,6 +110,7 @@ function leaveRoom(p, silent) {
   if (p.spec) { p.spec.spectators.delete(p.pid); const sr = p.spec; p.spec = null; destroyRoomIfEmpty(sr); }
   const room = p.room;
   if (!room) return;
+  voiceLeave(p);
   const mem = member(room, p.pid);
   if (!mem) { p.room = null; return; }
   if (room.match && room.match.running) {
@@ -277,6 +278,51 @@ function tickRoom(room, t) {
 }
 setInterval(() => { const t = now(); for (const room of rooms.values()) tickRoom(room, t); }, 1000 / 60);
 
+
+/* ---------------- danh sách phòng đang mở (để "dò trận") ---------------- */
+function isOpenRoom(room, mode) {
+  return !room.quick && !room.priv && !room.inMatch && (!mode || room.mode === mode) &&
+    !!pickTeam(room) && humansOnline(room).length > 0;
+}
+function listRooms() {
+  const open = [], live = [];
+  for (const room of rooms.values()) {
+    const names = room.members.map((m) => { const q = players.get(m.pid); return q ? q.name : '?'; });
+    if (isOpenRoom(room)) {
+      const host = players.get(room.hostId);
+      open.push({
+        code: room.code, mode: room.mode, host: host ? host.name : '?', hostChar: host ? host.char : '',
+        count: room.members.length, size: sizeOf(room) * 2, settings: room.settings, fillBots: room.fillBots, names,
+      });
+    } else if (room.match && room.match.running) {
+      live.push({ code: room.code, mode: room.mode, names, settings: room.settings, score: room.match.m.score || null });
+    }
+  }
+  open.sort((a, b) => (b.count - a.count) || a.code.localeCompare(b.code));
+  return { t: 'rooms', open: open.slice(0, 30), live: live.slice(0, 20) };
+}
+function findOpenRoom(mode) {
+  let best = null;
+  for (const room of rooms.values()) {
+    if (!isOpenRoom(room, mode)) continue;
+    if (!best || room.members.length > best.members.length) best = room;
+  }
+  return best;
+}
+
+/* ---------------- chat thoại: chỉ chuyển tin báo hiệu WebRTC trong cùng phòng ---------------- */
+function voiceMates(room, exceptPid) {
+  return room.members.map((m) => players.get(m.pid)).filter((q) => q && q.pid !== exceptPid && q.voice && q.conn);
+}
+function voiceLeave(p) {
+  if (!p.voice) return;
+  p.voice = false; p.vmuted = false;
+  const room = p.room;
+  if (!room) return;
+  for (const q of voiceMates(room, p.pid)) sendP(q, { t: 'voice_left', id: p.pid });
+  pushRoomState(room);
+}
+
 /* ---------------- ghép nhanh ---------------- */
 function broadcastQueue(mode) {
   for (const q of queues[mode]) sendP(players.get(q.pid), { t: 'queue_status', waiting: true, mode, count: queues[mode].length });
@@ -297,13 +343,30 @@ function launchQuick(mode, list, fill) {
   for (const mem of room.members) sendP(players.get(mem.pid), roomState(room));
   startMatch(room);
 }
-setInterval(() => {
+function matchmake() {
   for (const mode of ['1v1', '2v2']) {
     const q = queues[mode], need = mode === '2v2' ? 4 : 2;
-    if (q.length >= need) { const list = q.splice(0, need); launchQuick(mode, list, false); broadcastQueue(mode); }
-    else if (mode === '2v2' && q.length >= 2 && Date.now() - q[0].t > 10000) { const list = q.splice(0, q.length); launchQuick(mode, list, true); }
+    // 1) ưu tiên vào phòng đang mở của người khác (phòng do "Tạo phòng" lập) — đây là chỗ trước đây bị thiếu
+    for (const e of q.slice()) {
+      const p = players.get(e.pid);
+      if (!p || !p.conn) continue;
+      const room = findOpenRoom(mode);
+      if (!room) break;
+      queues[mode] = queues[mode].filter((x) => x.pid !== e.pid);
+      if (p.room) leaveRoom(p, true);
+      addMember(room, p);
+      const mem = member(room, p.pid); if (mem) mem.ready = true;       // đã chủ động tìm trận nên coi như sẵn sàng
+      sendP(p, { t: 'queue_status', waiting: false });
+      pushRoomState(room);
+      sysChat(room, p.name + ' đã vào phòng (tìm trận)');
+    }
+    // 2) ghép những người cùng đang chờ với nhau
+    const q2 = queues[mode];
+    if (q2.length >= need) { const list = q2.splice(0, need); launchQuick(mode, list, false); broadcastQueue(mode); }
+    else if (mode === '2v2' && q2.length >= 2 && Date.now() - q2[0].t > 10000) { const list = q2.splice(0, q2.length); launchQuick(mode, list, true); }
   }
-}, 1000).unref();
+}
+setInterval(matchmake, 1000).unref();
 
 /* ---------------- xử lý thông điệp ---------------- */
 function handle(conn, m) {
@@ -323,13 +386,37 @@ function handle(conn, m) {
       dequeue(p);
       queues[m.mode].push({ pid: p.pid, t: Date.now() });
       broadcastQueue(m.mode);
+      matchmake();
       break;
     }
     case 'queue_leave': if (dequeue(p)) sendP(p, { t: 'queue_status', waiting: false }); break;
     case 'room_create': {
       dequeue(p);
-      const room = createRoom(p, m.mode, { venue: m.settings.venue, target: m.settings.target, scoring: m.settings.scoring }, false);
+      const room = createRoom(p, m.mode, { venue: m.settings.venue, target: m.settings.target, scoring: m.settings.scoring }, false, !!m.priv);
       pushRoomState(room);
+      if (!room.priv) matchmake();       // ai đang "Tìm trận" sẽ được kéo vào phòng này ngay
+      break;
+    }
+    case 'rooms_list': sendP(p, listRooms()); break;
+    case 'voice_join': {
+      const room = p.room; if (!room || !member(room, p.pid)) return;
+      p.voice = true;
+      const peers = voiceMates(room, p.pid);
+      sendP(p, { t: 'voice_peers', ids: peers.map((q) => q.pid) });
+      for (const q of peers) sendP(q, { t: 'voice_joined', id: p.pid });
+      pushRoomState(room);
+      break;
+    }
+    case 'voice_leave': voiceLeave(p); break;
+    case 'voice_mute': {
+      const room = p.room; if (!room || !p.voice) return;
+      p.vmuted = !!m.muted; pushRoomState(room);
+      break;
+    }
+    case 'voice_signal': {
+      const room = p.room, q = players.get(String(m.to));
+      if (!room || !p.voice || !q || q.room !== room || !q.voice || !q.conn) return;
+      sendP(q, { t: 'voice_signal', from: p.pid, data: m.data });
       break;
     }
     case 'room_join': {
@@ -457,6 +544,7 @@ function onClose(conn) {
   if (!p || p.conn !== conn) return;
   p.conn = null;
   dequeue(p);
+  voiceLeave(p);
   if (p.spec) { const r = p.spec; r.spectators.delete(p.pid); p.spec = null; destroyRoomIfEmpty(r); }
   const room = p.room;
   if (!room) { setTimeout(() => { if (!p.conn && !p.room) players.delete(p.pid); }, 60000).unref(); return; }

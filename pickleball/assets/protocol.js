@@ -47,7 +47,13 @@
     ping: (m) => isNum(m.c, 0, 1e12),
     queue_join: (m) => MODES.includes(m.mode),
     queue_leave: () => true,
-    room_create: (m) => MODES.includes(m.mode) && settingsOk(m.settings),
+    room_create: (m) => MODES.includes(m.mode) && settingsOk(m.settings) && (m.priv === undefined || typeof m.priv === 'boolean'),
+    rooms_list: () => true,
+    // v5: chat thoại (WebRTC). Server chỉ chuyển tin báo hiệu giữa người trong cùng phòng, KHÔNG nhận hay lưu âm thanh
+    voice_join: () => true,
+    voice_leave: () => true,
+    voice_mute: (m) => typeof m.muted === 'boolean',
+    voice_signal: (m) => isStr(m.to, 16, 1) && isObj(m.data) && JSON.stringify(m.data).length <= 6000,
     room_join: (m) => isStr(m.code, 4, 4),
     room_leave: () => true,
     room_update: (m) => (m.settings === undefined || settingsOk(m.settings)) &&

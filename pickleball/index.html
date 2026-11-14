@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com/">
   <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
   <link href="./assets/css2" rel="stylesheet" media="all" onload="this.media=&#39;all&#39;">
-  <link rel="stylesheet" href="./assets/style.css?v=4">
+  <link rel="stylesheet" href="./assets/style.css?v=5">
 </head>
 <body>
   <canvas id="game" data-engine="three.js r147" width="1156" height="1071" style="width: 771px; height: 714px;"></canvas>
@@ -280,6 +280,7 @@
       <div class="grid2">
         <div class="panel">
           <h3>Tìm trận nhanh</h3>
+          <p class="note">Tự vào phòng đang chờ của người khác, hoặc ghép với người cũng đang tìm.</p>
           <div class="btn-col">
             <button class="btn primary" data-queue="1v1">⚡ Tìm trận 1v1</button>
             <button class="btn primary" data-queue="2v2">⚡ Tìm trận 2v2</button>
@@ -289,6 +290,7 @@
             <button class="btn" data-create="1v1">＋ Tạo phòng 1v1</button>
             <button class="btn" data-create="2v2">＋ Tạo phòng 2v2</button>
           </div>
+          <label class="check priv"><input type="checkbox" id="create-priv"> 🔒 Phòng riêng (chỉ vào bằng mã, không hiện trong danh sách)</label>
           <div class="join-row">
             <input id="join-code" maxlength="4" placeholder="MÃ" autocomplete="off">
             <button class="btn" id="btn-join">Vào phòng</button>
@@ -304,6 +306,12 @@
           <div class="row-between"><h3>Bảng xếp hạng</h3><button class="btn tiny ghost" id="btn-live-refresh">↻</button></div>
           <ol class="list lb" id="lb-list"><li class="muted">…</li></ol>
         </div>
+      </div>
+      <div class="panel rooms-panel">
+        <div class="row-between"><h3>Phòng đang mở <small>(bấm Vào để chơi ngay)</small></h3><button class="btn tiny ghost" id="btn-rooms-refresh">↻ Làm mới</button></div>
+        <ul class="list rooms" id="rooms-open"><li class="muted">Đang dò phòng…</li></ul>
+        <h3>Trận đang diễn ra <small>(xem trực tiếp)</small></h3>
+        <ul class="list rooms" id="rooms-live"></ul>
       </div>
       <div class="btn-row">
         <button class="btn ghost" id="btn-online-back">← Menu</button>
@@ -347,7 +355,18 @@
           </div>
         </div>
         <div class="panel chat">
-          <h3>Chat</h3>
+          <h3>Chat thoại 🎤</h3>
+          <div class="voice-box" id="voice-box">
+            <div class="voice-bar">
+              <button class="btn tiny primary" id="voice-toggle">🎤 Bật chat thoại</button>
+              <button class="btn tiny ghost hidden" id="voice-mute">🎙 Mic đang bật</button>
+              <button class="btn tiny ghost hidden" id="voice-mode">Chế độ: mở mic</button>
+            </div>
+            <button class="btn tiny voice-ptt hidden" id="voice-ptt">🗣 Giữ để nói (hoặc giữ phím T)</button>
+            <ul class="voice-list" id="voice-list"></ul>
+            <p class="note" id="voice-note"></p>
+          </div>
+          <h3>Chat chữ</h3>
           <div class="chat-log" id="chat-log"></div>
           <form class="chat-form" id="chat-form"><input id="chat-input" maxlength="120" autocomplete="off" placeholder="Nhắn gì đó…"><button class="btn tiny">Gửi</button></form>
         </div>
@@ -413,7 +432,7 @@
   <div id="loading" class="hidden"><div class="ld-box"><div class="spinner"></div><div id="loading-text">Đang chuẩn bị đồ họa…</div><div id="loading-sub"></div><button id="loading-reload" class="btn primary hidden" onclick="location.reload()">↻ Tải lại</button></div></div>
   <script>
     // Bắt lỗi xảy ra trước khi game khởi động xong để không bao giờ "treo im lặng"
-    window.PP_HTML_REV = 8;   // tăng khi đổi cấu trúc HTML mà game.js phụ thuộc
+    window.PP_HTML_REV = 9;   // tăng khi đổi cấu trúc HTML mà game.js phụ thuộc
     (function () {
       function fail(msg) {
         var l = document.getElementById('loading'); if (!l || l.classList.contains('hidden')) return;
@@ -439,15 +458,16 @@
   <script src="./assets/physics.js"></script>
   <script src="./assets/match.js"></script>
   <script src="./assets/ai.js"></script>
-  <script src="./assets/protocol.js"></script>
+  <script src="./assets/protocol.js?v=5"></script>
   <script src="./assets/audio.js"></script>
   <script src="./assets/world.js"></script>
   <script src="./assets/kit.js?v=4"></script>
   <script src="./assets/character.js?v=4"></script>
   <script src="./assets/input.js"></script>
   <script src="./assets/net.js"></script>
+  <script src="./assets/voice.js?v=5"></script>
   <script src="./assets/ui.js"></script>
-  <script src="./assets/game.js?v=4"></script>
+  <script src="./assets/game.js?v=5"></script>
 
 
 

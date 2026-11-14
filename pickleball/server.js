@@ -14,9 +14,22 @@ const TYPES = {
   '.mp3': 'audio/mpeg', '.png': 'image/png', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2',
 };
 
+// Máy chủ ICE cho chat thoại. Mặc định chỉ có STUN công cộng. Muốn chắc chắn nối được mọi mạng (4G, wifi công ty),
+// đặt biến môi trường TURN_URL (vd: turn:xyz.example.com:443?transport=tcp), TURN_USER, TURN_PASS
+// hoặc ICE_SERVERS = chuỗi JSON của mảng iceServers (lấy từ Metered / Cloudflare / Twilio…).
+function iceServers() {
+  const list = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+  try {
+    if (process.env.ICE_SERVERS) { const j = JSON.parse(process.env.ICE_SERVERS); if (Array.isArray(j)) return list.concat(j); }
+    if (process.env.TURN_URL) list.push({ urls: process.env.TURN_URL.split(',').map((x) => x.trim()).filter(Boolean), username: process.env.TURN_USER || '', credential: process.env.TURN_PASS || '' });
+  } catch (e) { console.error('ICE_SERVERS không hợp lệ:', e.message); }
+  return list;
+}
+
 const server = http.createServer((req, res) => {
   let url = decodeURIComponent((req.url || '/').split('?')[0]);
   if (url === '/healthz') { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify(Object.assign({ ok: true }, gameServer.stats()))); }
+  if (url === '/ice') { res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); return res.end(JSON.stringify({ iceServers: iceServers() })); }
   if (url === '/') url = '/index.html';
   const file = path.normalize(path.join(ROOT, url));
   // chỉ cho phép đọc index.html và thư mục assets

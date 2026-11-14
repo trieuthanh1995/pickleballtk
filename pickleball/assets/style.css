@@ -446,3 +446,30 @@ body.touch .rules-panel { width: min(270px, 72vw); }
 .kit-ed-chk { margin-left: auto; font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
 .kit-ed-row .btn.sel { background: #2b86b0; color: #fff; box-shadow: none; }
 .kit-ed-act { justify-content: flex-end; margin-top: 14px; }
+
+/* ===== v5: dò phòng + chat thoại ===== */
+.rooms-panel { margin-top: 12px; }
+.list.rooms { list-style: none; margin: 4px 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
+.room-row { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 12px; padding: 8px 10px; box-shadow: 0 1px 6px rgba(40, 50, 90, 0.1); }
+.room-row .room-info { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 14px; }
+.room-row .room-info .muted { font-size: 12px; }
+.check.priv { display: block; margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+.voice-box { background: #f4f6fc; border-radius: 12px; padding: 8px; margin-bottom: 8px; }
+.voice-bar { display: flex; flex-wrap: wrap; gap: 6px; }
+.voice-bar .btn.off { background: #ffe1e4; color: #b3243b; box-shadow: none; }
+.voice-ptt { width: 100%; margin-top: 6px; padding: 12px 8px; font-size: 16px; user-select: none; touch-action: none; }
+.voice-ptt.on { background: #2bb5a6; color: #fff; }
+.voice-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.voice-row { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 3px 6px; border-radius: 10px; background: #fff; border: 2px solid transparent; transition: border-color 0.1s, box-shadow 0.1s; }
+.voice-row.off { opacity: 0.55; }
+.voice-row .vname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.voice-row .vstate { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.voice-row input[type=range] { width: 70px; accent-color: var(--primary); }
+.voice-row.speaking { border-color: #2bd96b; box-shadow: 0 0 0 3px rgba(43, 217, 107, 0.25); }
+#voice-hud { pointer-events: auto; position: absolute; right: 12px; top: calc(max(10px, env(safe-area-inset-top)) + 56px); display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+#voice-hud .vh-btn { width: 46px; height: 46px; border-radius: 50%; border: 0; font-size: 20px; background: rgba(255, 255, 255, 0.92); box-shadow: 0 6px 16px rgba(20, 30, 60, 0.2); cursor: pointer; touch-action: none; user-select: none; }
+#voice-hud .vh-btn.on { box-shadow: 0 0 0 3px #2bb5a6, 0 6px 16px rgba(20, 30, 60, 0.2); }
+#voice-hud .vh-btn.off { box-shadow: 0 0 0 3px #e0525f, 0 6px 16px rgba(20, 30, 60, 0.2); }
+#voice-hud .vh-chip { position: relative; display: inline-flex; width: 34px; height: 34px; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255, 255, 255, 0.9); border: 3px solid transparent; font-size: 16px; overflow: hidden; }
+#voice-hud .vh-chip.speaking { border-color: #2bd96b; box-shadow: 0 0 10px #2bd96b; }
+#voice-hud .vh-chip i { position: absolute; right: -2px; bottom: -2px; font-size: 11px; font-style: normal; }
